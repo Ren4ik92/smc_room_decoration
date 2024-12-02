@@ -41,8 +41,11 @@ INSTALLED_APPS = [
     'main',
     'users',
     'import_export',
-    'drf_yasg',
+    'drf_spectacular',
 ]
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -123,4 +126,16 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = 'users.MyUser'
+#AUTH_USER_MODEL = 'users.MyUser'
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "SMC",
+    "DESCRIPTION": "This is a sample API documentation.",
+    "VERSION": "v1",
+    "CONTACT": {
+        "email": "contact@myapi.local",
+    },
+    "LICENSE": {
+        "name": "BSD License",
+    },
+}

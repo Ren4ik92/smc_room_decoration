@@ -129,7 +129,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #AUTH_USER_MODEL = 'users.MyUser'
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "SMC",
+    "TITLE": "room",
     "DESCRIPTION": "This is a sample API documentation.",
     "VERSION": "v1",
     "CONTACT": {

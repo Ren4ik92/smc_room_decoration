@@ -28,7 +28,7 @@ class RoomViewSet(ModelViewSet):
             'ceilingworkvolume_volumes'
         )
 
-    @action(detail=True, methods=['post'], url_path='update-room-volumes')
+    @action(detail=True, methods=['post', 'patch', 'get'], url_path='update-room')
     def update_room_volumes(self, request, pk=None):
         """Обновление объемов для комнаты (пол, стены, потолок)"""
         room = self.get_object()

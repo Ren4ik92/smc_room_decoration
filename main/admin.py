@@ -3,7 +3,7 @@ from import_export.admin import ImportExportModelAdmin
 from .models import (
     Room, FloorType, FloorWorkVolume,
     WallType, WallWorkVolume,
-    CeilingType, CeilingWorkVolume
+    CeilingType, CeilingWorkVolume, Organization, Project
 )
 from import_export import resources
 
@@ -106,3 +106,15 @@ class CeilingWorkVolumeAdmin(admin.ModelAdmin):
     list_display = ('room', 'element_number', 'ceiling_type', 'volume', 'completion_percentage', 'unit')
     list_filter = ('room', 'ceiling_type')
     search_fields = ('room__name', 'ceiling_type__type_code')
+
+
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+
+@admin.register(Project)
+class Project(admin.ModelAdmin):
+    list_display = ('name', 'organization')
+
+
+

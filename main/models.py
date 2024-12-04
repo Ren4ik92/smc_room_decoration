@@ -2,7 +2,7 @@ from django.db import models
 
 
 class Organization(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, verbose_name='Название')
 
     def __str__(self):
         return self.name
@@ -12,8 +12,21 @@ class Organization(models.Model):
         verbose_name_plural = 'Организации'
 
 
+class Project(models.Model):
+    name = models.CharField(max_length=255, verbose_name='Название')
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, verbose_name='Организация')
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = 'Проект'
+        verbose_name_plural = 'Проекты'
+
+
 class Room(models.Model):
     """Модель помещения"""
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, default=None, verbose_name='Проект')
     code = models.CharField('Код', max_length=50, unique=True, blank=True)
     block = models.CharField('Здание', max_length=10)
     floor = models.IntegerField('Этаж', blank=True)

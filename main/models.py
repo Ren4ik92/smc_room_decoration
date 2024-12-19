@@ -34,6 +34,9 @@ class Room(models.Model):
     name = models.CharField('Наименование', max_length=255, blank=False)
     area = models.FloatField('Площадь', default=0)
 
+    def organization(self):
+        return self.project.organization if self.project else None
+
     def __str__(self):
         return f"{self.code} - {self.name}"
 

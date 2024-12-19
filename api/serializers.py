@@ -30,7 +30,7 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FloorWorkVolume
-        fields = ['id', 'floor_type', 'element_number', 'volume', 'completion_percentage']
+        fields = ['id', 'floor_type', 'volume', 'completion_percentage']
 
 
 class WallTypeReadSerializer(serializers.ModelSerializer):
@@ -47,7 +47,7 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WallWorkVolume
-        fields = ['id', 'wall_type', 'element_number', 'volume', 'completion_percentage']
+        fields = ['id', 'wall_type', 'volume', 'completion_percentage']
 
 
 class CeilingTypeReadSerializer(serializers.ModelSerializer):
@@ -64,7 +64,7 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CeilingWorkVolume
-        fields = ['id', 'ceiling_type', 'element_number', 'volume', 'completion_percentage']
+        fields = ['id', 'ceiling_type', 'volume', 'completion_percentage']
 
 
 class RoomReadSerializer(serializers.ModelSerializer):
@@ -84,19 +84,19 @@ class RoomReadSerializer(serializers.ModelSerializer):
 class FloorWorkVolumeWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = FloorWorkVolume
-        fields = ['floor_type', 'element_number', 'volume', 'completion_percentage']
+        fields = ['floor_type', 'volume', 'completion_percentage']
 
 
 class WallWorkVolumeWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = WallWorkVolume
-        fields = ['wall_type', 'element_number', 'volume', 'completion_percentage']
+        fields = ['wall_type', 'volume', 'completion_percentage']
 
 
 class CeilingWorkVolumeWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = CeilingWorkVolume
-        fields = ['ceiling_type', 'element_number', 'volume', 'completion_percentage']
+        fields = ['ceiling_type', 'volume', 'completion_percentage']
 
 
 class RoomWriteSerializer(serializers.ModelSerializer):
@@ -147,6 +147,5 @@ class RoomWriteSerializer(serializers.ModelSerializer):
         for volume_data in volumes_data:
             obj, created = model.objects.update_or_create(
                 room=room,
-                element_number=volume_data['element_number'],
                 defaults=volume_data
             )

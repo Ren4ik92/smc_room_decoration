@@ -107,7 +107,7 @@ class CeilingType(models.Model):
 class WorkVolume(models.Model):
     """Базовая модель объема отделки"""
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="%(class)s_volumes")
-    element_number = models.IntegerField('Номер элемента')
+    # element_number = models.IntegerField('Номер элемента')
     volume = models.FloatField('Объем (м²)', default=0)  # Общий объем
     completion_percentage = models.FloatField('Процент выполнения', default=0)  # В процентах
     unit = models.CharField('Ед. изм.', max_length=10, default='м²')

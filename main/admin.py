@@ -89,21 +89,21 @@ class CeilingTypeAdmin(ImportExportModelAdmin):
 # Админка для объемов отделки
 @admin.register(FloorWorkVolume)
 class FloorWorkVolumeAdmin(admin.ModelAdmin):
-    list_display = ('room', 'element_number', 'floor_type', 'volume', 'completion_percentage', 'unit')
+    list_display = ('room', 'floor_type', 'volume', 'completion_percentage', 'unit')
     list_filter = ('room', 'floor_type')
     search_fields = ('room__name', 'floor_type__type_code')
 
 
 @admin.register(WallWorkVolume)
 class WallWorkVolumeAdmin(admin.ModelAdmin):
-    list_display = ('room', 'element_number', 'wall_type', 'volume', 'completion_percentage', 'unit')
+    list_display = ('room', 'wall_type', 'volume', 'completion_percentage', 'unit')
     list_filter = ('room', 'wall_type')
     search_fields = ('room__name', 'wall_type__type_code')
 
 
 @admin.register(CeilingWorkVolume)
 class CeilingWorkVolumeAdmin(admin.ModelAdmin):
-    list_display = ('room', 'element_number', 'ceiling_type', 'volume', 'completion_percentage', 'unit')
+    list_display = ('room', 'ceiling_type', 'volume', 'completion_percentage', 'unit')
     list_filter = ('room', 'ceiling_type')
     search_fields = ('room__name', 'ceiling_type__type_code')
 

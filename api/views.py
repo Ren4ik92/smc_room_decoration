@@ -2,14 +2,14 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
-from main.models import Room, FloorWorkVolume, WallWorkVolume, CeilingWorkVolume
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from main.models import Room, FloorWorkVolume, WallWorkVolume, CeilingWorkVolume, FloorType, WallType, CeilingType
 from .serializers import (
     RoomReadSerializer,
     RoomWriteSerializer,
     FloorWorkVolumeWriteSerializer,
     WallWorkVolumeWriteSerializer,
-    CeilingWorkVolumeWriteSerializer,
+    CeilingWorkVolumeWriteSerializer, FloorTypeReadSerializer,
 )
 
 
@@ -35,57 +35,61 @@ class RoomViewSet(ModelViewSet):
             'ceilingworkvolume_volumes'
         )
 
-    @action(detail=True, methods=['post', 'patch'], url_path='update-room')
-    def update_room_volumes(self, request, pk=None):
+    @action(detail=True, methods=['post'], url_path='add-volumes')
+    def add_room_volumes(self, request, pk=None):
         """
-        Обновление объемов для комнаты (пол, стены, потолок) через вложенные данные.
+        Добавление новых объемов для комнаты (пол, стены, потолок).
         """
         room = self.get_object()
+        room_area = room.area
 
-        # Сериализаторы для записи
-        floor_serializer = FloorWorkVolumeWriteSerializer(data=request.data.get('floor_volumes', []), many=True)
-        wall_serializer = WallWorkVolumeWriteSerializer(data=request.data.get('wall_volumes', []), many=True)
-        ceiling_serializer = CeilingWorkVolumeWriteSerializer(data=request.data.get('ceiling_volumes', []), many=True)
+        # Получаем данные из запроса
+        floor_data_list = request.data.get('floor_volumes', [])
+        wall_data_list = request.data.get('wall_volumes', [])
+        ceiling_data_list = request.data.get('ceiling_volumes', [])
 
-        # Проверяем данные для каждого типа
-        floor_serializer.is_valid(raise_exception=True)
-        wall_serializer.is_valid(raise_exception=True)
-        ceiling_serializer.is_valid(raise_exception=True)
+        # Обрабатываем данные для каждого типа
+        self._process_volumes(room, floor_data_list, FloorWorkVolume, room_area, 'floor_type')
+        self._process_volumes(room, wall_data_list, WallWorkVolume, room_area, 'wall_type')
+        self._process_volumes(room, ceiling_data_list, CeilingWorkVolume, room_area, 'ceiling_type')
 
-        # Обновляем объемы пола
-        for floor_data in floor_serializer.validated_data:
-            FloorWorkVolume.objects.update_or_create(
+        return Response({'status': 'volumes added'}, status=status.HTTP_201_CREATED)
+
+    def _process_volumes(self, room, volumes_data, model, room_area, type_field):
+        """
+        Обработка и создание объектов объемов работ для определенного типа.
+        """
+        for volume_data in volumes_data:
+
+            volume = volume_data.get('volume')
+            completion_percentage = volume_data.get('completion_percentage')
+
+            if volume is not None and completion_percentage is not None:
+                raise ValidationError("Необходимо передать либо volume либо completion_percentage, но не оба поля")
+            if volume is None and completion_percentage is None:
+                raise ValidationError("Необходимо передать либо volume либо completion_percentage")
+
+            if volume is None:
+                volume = (room_area * completion_percentage) / 100
+            elif completion_percentage is None:
+                completion_percentage = (volume / room_area) * 100
+
+            model.objects.create(
                 room=room,
-                floor_type_id=floor_data['floor_type'],
-                element_number=floor_data['element_number'],
-                defaults={
-                    'volume': floor_data['volume'],
-                    'completion_percentage': floor_data['completion_percentage']
-                }
+                **{type_field + '_id': volume_data[type_field]},
+                volume=volume,
+                completion_percentage=completion_percentage
             )
 
-        # Обновляем объемы стен
-        for wall_data in wall_serializer.validated_data:
-            WallWorkVolume.objects.update_or_create(
-                room=room,
-                wall_type_id=wall_data['wall_type'],
-                element_number=wall_data['element_number'],
-                defaults={
-                    'volume': wall_data['volume'],
-                    'completion_percentage': wall_data['completion_percentage']
-                }
-            )
 
-        # Обновляем объемы потолков
-        for ceiling_data in ceiling_serializer.validated_data:
-            CeilingWorkVolume.objects.update_or_create(
-                room=room,
-                ceiling_type_id=ceiling_data['ceiling_type'],
-                element_number=ceiling_data['element_number'],
-                defaults={
-                    'volume': ceiling_data['volume'],
-                    'completion_percentage': ceiling_data['completion_percentage']
-                }
-            )
+class FloorTypeViewSet(ReadOnlyModelViewSet):
+    queryset = FloorType.objects.all()
+    serializer_class = FloorTypeReadSerializer
 
-        return Response({'status': 'volumes updated'}, status=status.HTTP_200_OK)
+class WallTypeViewSet(ReadOnlyModelViewSet):
+    queryset = WallType.objects.all()
+    serializer_class = FloorTypeReadSerializer
+
+class CeilingTypeViewSet(ReadOnlyModelViewSet):
+    queryset = CeilingType.objects.all()
+    serializer_class = FloorTypeReadSerializer

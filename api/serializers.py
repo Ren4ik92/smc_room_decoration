@@ -77,7 +77,8 @@ class RoomReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Room
-        fields = ['organization', 'project', 'id', 'name', 'area', 'floor_volumes', 'wall_volumes', 'ceiling_volumes']
+        fields = ['organization', 'project', 'id', 'name', 'area_floor', 'area_wall', 'area_ceiling',
+                  'floor_volumes', 'wall_volumes', 'ceiling_volumes']
 
 
 # Сериализаторы для записи (POST)
@@ -119,7 +120,7 @@ class RoomWriteSerializer(serializers.ModelSerializer):
         Создание новой комнаты с добавлением связанных объемов работ.
         """
         room = self.context['room']  # Получаем объект комнаты из контекста
-        room_area = room.area  # Получаем площадь комнаты
+        #room_area = room.area  # Получаем площадь комнаты
 
         # Создаем объект комнаты
         room = Room.objects.create(**validated_data)

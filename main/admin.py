@@ -58,7 +58,7 @@ class CeilingWorkVolumeInline(admin.TabularInline):
 @admin.register(Room)
 class RoomAdmin(ImportExportModelAdmin):
     resource_class = RoomResource
-    list_display = ('code', 'name', 'block', 'floor', 'area')
+    list_display = ('code', 'name', 'block', 'floor', 'area_floor', 'area_wall', 'area_ceiling')
     search_fields = ('code', 'name', 'block', 'room_number')
     list_filter = ('block', 'floor')
     inlines = [FloorWorkVolumeInline, WallWorkVolumeInline, CeilingWorkVolumeInline]

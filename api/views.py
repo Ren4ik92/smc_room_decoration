@@ -9,7 +9,7 @@ from .serializers import (
     RoomWriteSerializer,
     FloorWorkVolumeWriteSerializer,
     WallWorkVolumeWriteSerializer,
-    CeilingWorkVolumeWriteSerializer, FloorTypeReadSerializer,
+    CeilingWorkVolumeWriteSerializer, FloorTypeReadSerializer, WallTypeReadSerializer, CeilingTypeReadSerializer,
 )
 
 
@@ -41,24 +41,24 @@ class RoomViewSet(ModelViewSet):
         Добавление новых объемов для комнаты (пол, стены, потолок).
         """
         room = self.get_object()
-        room_area = room.area
 
         # Получаем данные из запроса
         floor_data_list = request.data.get('floor_volumes', [])
         wall_data_list = request.data.get('wall_volumes', [])
         ceiling_data_list = request.data.get('ceiling_volumes', [])
 
-        # Обрабатываем данные для каждого типа
-        self._process_volumes(room, floor_data_list, FloorWorkVolume, room_area, 'floor_type')
-        self._process_volumes(room, wall_data_list, WallWorkVolume, room_area, 'wall_type')
-        self._process_volumes(room, ceiling_data_list, CeilingWorkVolume, room_area, 'ceiling_type')
+        # Обрабатываем данные для каждого типа с учетом соответствующей площади
+        self._process_volumes(room, floor_data_list, FloorWorkVolume, 'area_floor', 'floor_type')
+        self._process_volumes(room, wall_data_list, WallWorkVolume, 'area_wall', 'wall_type')
+        self._process_volumes(room, ceiling_data_list, CeilingWorkVolume, 'area_ceiling', 'ceiling_type')
 
         return Response({'status': 'volumes added'}, status=status.HTTP_201_CREATED)
 
-    def _process_volumes(self, room, volumes_data, model, room_area, type_field):
+    def _process_volumes(self, room, volumes_data, model, area_field, type_field):
         """
         Обработка и создание объектов объемов работ для определенного типа.
         """
+        room_area = getattr(room, area_field)  # Получаем площадь из соответствующего поля
         for volume_data in volumes_data:
 
             volume = volume_data.get('volume')
@@ -86,10 +86,12 @@ class FloorTypeViewSet(ReadOnlyModelViewSet):
     queryset = FloorType.objects.all()
     serializer_class = FloorTypeReadSerializer
 
+
 class WallTypeViewSet(ReadOnlyModelViewSet):
     queryset = WallType.objects.all()
-    serializer_class = FloorTypeReadSerializer
+    serializer_class = WallTypeReadSerializer
+
 
 class CeilingTypeViewSet(ReadOnlyModelViewSet):
     queryset = CeilingType.objects.all()
-    serializer_class = FloorTypeReadSerializer
+    serializer_class = CeilingTypeReadSerializer

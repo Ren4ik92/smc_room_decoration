@@ -41,6 +41,15 @@ class RoomViewSet(ModelViewSet):
         Добавление новых объемов для комнаты (пол, стены, потолок).
         """
         room = self.get_object()
+        # Проверка площади
+        if room.area_floor == 0 and room.area_wall == 0 and room.area_ceiling == 0:
+            raise ValidationError("Невозможно добавить объемы: все площади комнаты равны нулю.")
+        if room.area_floor == 0:
+            raise ValidationError("Невозможно добавить объемы: площадь пола равна нулю.")
+        if room.area_wall == 0:
+            raise ValidationError("Невозможно добавить объемы: площадь стен равна нулю.")
+        if room.area_ceiling == 0:
+            raise ValidationError("Невозможно добавить объемы: площадь потолка равна нулю.")
 
         # Получаем данные из запроса
         floor_data_list = request.data.get('floor_volumes', [])
@@ -58,27 +67,47 @@ class RoomViewSet(ModelViewSet):
         """
         Обработка и создание объектов объемов работ для определенного типа.
         """
-        room_area = getattr(room, area_field)  # Получаем площадь из соответствующего поля
-        for volume_data in volumes_data:
+        room_area = getattr(room, area_field)
 
+        for volume_data in volumes_data:
+            # Проверяем, существует ли указанный тип отделки
+            type_id = volume_data.get(type_field)
+            if not model.objects.filter(id=type_id).exists():
+                raise ValidationError(
+                    {type_field: f"{type_field} с ID {type_id} не существует. Укажите корректный ID."}
+                )
+
+        # Получаем площадь из соответствующего поля
+        for volume_data in volumes_data:
             volume = volume_data.get('volume')
             completion_percentage = volume_data.get('completion_percentage')
+            note = volume_data.get('note', None)
 
+            # Проверка на одновременное указание двух параметров
             if volume is not None and completion_percentage is not None:
-                raise ValidationError("Необходимо передать либо volume либо completion_percentage, но не оба поля")
+                raise ValidationError("Необходимо передать либо volume, либо completion_percentage, но не оба.")
             if volume is None and completion_percentage is None:
-                raise ValidationError("Необходимо передать либо volume либо completion_percentage")
+                raise ValidationError("Необходимо передать либо volume, либо completion_percentage.")
 
-            if volume is None:
+            # Если указан процент, проверяем его допустимость
+            if completion_percentage is not None:
+                if completion_percentage > 100:
+                    raise ValidationError("Процент завершения не может превышать 100%.")
                 volume = (room_area * completion_percentage) / 100
-            elif completion_percentage is None:
+
+            # Если указан объем, проверяем его допустимость
+            if volume is not None:
+                if volume > room_area:
+                    raise ValidationError(f"Объем не может превышать доступную площадь: {room_area}.")
                 completion_percentage = (volume / room_area) * 100
 
+            # Создаем запись в базе
             model.objects.create(
                 room=room,
                 **{type_field + '_id': volume_data[type_field]},
                 volume=volume,
-                completion_percentage=completion_percentage
+                completion_percentage=completion_percentage,
+                note=note
             )
 
 

@@ -30,7 +30,7 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FloorWorkVolume
-        fields = ['id', 'floor_type', 'volume', 'completion_percentage']
+        fields = ['id', 'floor_type', 'volume', 'completion_percentage', 'note', 'datetime']
 
 
 class WallTypeReadSerializer(serializers.ModelSerializer):
@@ -47,7 +47,7 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WallWorkVolume
-        fields = ['id', 'wall_type', 'volume', 'completion_percentage']
+        fields = ['id', 'wall_type', 'volume', 'completion_percentage', 'note', 'datetime']
 
 
 class CeilingTypeReadSerializer(serializers.ModelSerializer):
@@ -64,7 +64,7 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CeilingWorkVolume
-        fields = ['id', 'ceiling_type', 'volume', 'completion_percentage']
+        fields = ['id', 'ceiling_type', 'volume', 'completion_percentage', 'note', 'datetime']
 
 
 class RoomReadSerializer(serializers.ModelSerializer):
@@ -84,26 +84,29 @@ class RoomReadSerializer(serializers.ModelSerializer):
 # Сериализаторы для записи (POST)
 class FloorWorkVolumeWriteSerializer(serializers.ModelSerializer):
     floor_type = serializers.PrimaryKeyRelatedField(queryset=FloorType.objects.all())
+    note = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = FloorWorkVolume
-        fields = ['floor_type', 'volume', 'completion_percentage']
+        fields = ['floor_type', 'volume', 'completion_percentage', 'note', 'date_added']
 
 
 class WallWorkVolumeWriteSerializer(serializers.ModelSerializer):
     wall_type = serializers.PrimaryKeyRelatedField(queryset=WallType.objects.all())
+    note = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = WallWorkVolume
-        fields = ['wall_type', 'volume', 'completion_percentage']
+        fields = ['wall_type', 'volume', 'completion_percentage', 'note', 'date_added']
 
 
 class CeilingWorkVolumeWriteSerializer(serializers.ModelSerializer):
     ceiling_type = serializers.PrimaryKeyRelatedField(queryset=CeilingType.objects.all())
+    note = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = CeilingWorkVolume
-        fields = ['ceiling_type', 'volume', 'completion_percentage']
+        fields = ['ceiling_type', 'volume', 'completion_percentage', 'note', 'date_added']
 
 
 class RoomWriteSerializer(serializers.ModelSerializer):
@@ -126,14 +129,14 @@ class RoomWriteSerializer(serializers.ModelSerializer):
         room = Room.objects.create(**validated_data)
 
         # Создаем связанные объемы с передачей площади через контекст
-        floor_volumes_data = validated_data.pop('floorworkvolume_volumes', [])
-        wall_volumes_data = validated_data.pop('wallworkvolume_volumes', [])
-        ceiling_volumes_data = validated_data.pop('ceilingworkvolume_volumes', [])
+        # floor_volumes_data = validated_data.pop('floorworkvolume_volumes', [])
+        # wall_volumes_data = validated_data.pop('wallworkvolume_volumes', [])
+        # ceiling_volumes_data = validated_data.pop('ceilingworkvolume_volumes', [])
 
         # Передаем контекст с площадью для всех связанных объемов
-        self._create_related_volumes(FloorWorkVolume, room, floor_volumes_data, room_area)
-        self._create_related_volumes(WallWorkVolume, room, wall_volumes_data, room_area)
-        self._create_related_volumes(CeilingWorkVolume, room, ceiling_volumes_data, room_area)
+        # self._create_related_volumes(FloorWorkVolume, room, floor_volumes_data, room_area)
+        # self._create_related_volumes(WallWorkVolume, room, wall_volumes_data, room_area)
+        # self._create_related_volumes(CeilingWorkVolume, room, ceiling_volumes_data, room_area)
 
         return room
 

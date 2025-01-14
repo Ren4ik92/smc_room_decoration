@@ -32,9 +32,9 @@ class Room(models.Model):
     floor = models.IntegerField('Этаж', blank=True)
     room_number = models.CharField('Номер помещения', max_length=50, blank=True)
     name = models.CharField('Наименование', max_length=255, blank=False)
-    area_floor = models.FloatField('Площадь пола', default=0)
-    area_wall = models.FloatField('Площадь стен', default=0)
-    area_ceiling = models.FloatField('Площадь потолка', default=0)
+    area_floor = models.FloatField('Площадь пола', default=1)
+    area_wall = models.FloatField('Площадь стен', default=1)
+    area_ceiling = models.FloatField('Площадь потолка', default=1)
 
     def organization(self):
         return self.project.organization if self.project else None
@@ -130,6 +130,9 @@ class FloorWorkVolume(WorkVolume):
     """Объемы отделки полов"""
     floor_type = models.ForeignKey(FloorType, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='floorworkvolume_volumes')
+    note = models.TextField(null=True, blank=True)
+    datetime = models.DateTimeField(auto_now_add=True)
+    date_added = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         verbose_name = 'Объем отделки пола'
@@ -140,6 +143,9 @@ class WallWorkVolume(WorkVolume):
     """Объемы отделки стен"""
     wall_type = models.ForeignKey(WallType, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='wallworkvolume_volumes')
+    note = models.TextField(null=True, blank=True)
+    datetime = models.DateTimeField(auto_now_add=True)
+    date_added = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         verbose_name = 'Объем отделки стен'
@@ -150,6 +156,9 @@ class CeilingWorkVolume(WorkVolume):
     """Объемы отделки потолков"""
     ceiling_type = models.ForeignKey(CeilingType, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='ceilingworkvolume_volumes')
+    note = models.TextField(null=True, blank=True)
+    datetime = models.DateTimeField(auto_now_add=True)
+    date_added = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         verbose_name = 'Объем отделки потолков'

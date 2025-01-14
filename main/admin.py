@@ -13,7 +13,7 @@ class RoomResource(resources.ModelResource):
     class Meta:
         model = Room
         fields = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area')
-        export_order = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area')
+        export_order = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling')
 
 
 # Resource для импорта/экспорта типов отделки
@@ -89,22 +89,22 @@ class CeilingTypeAdmin(ImportExportModelAdmin):
 # Админка для объемов отделки
 @admin.register(FloorWorkVolume)
 class FloorWorkVolumeAdmin(admin.ModelAdmin):
-    list_display = ('room', 'floor_type', 'volume', 'completion_percentage', 'unit')
-    list_filter = ('room', 'floor_type')
+    list_display = ('room', 'floor_type', 'volume', 'completion_percentage', 'unit', 'note', 'datetime')
+    list_filter = ('room', 'floor_type', 'datetime')
     search_fields = ('room__name', 'floor_type__type_code')
 
 
 @admin.register(WallWorkVolume)
 class WallWorkVolumeAdmin(admin.ModelAdmin):
-    list_display = ('room', 'wall_type', 'volume', 'completion_percentage', 'unit')
-    list_filter = ('room', 'wall_type')
+    list_display = ('room', 'wall_type', 'volume', 'completion_percentage', 'unit', 'note', 'datetime')
+    list_filter = ('room', 'wall_type', 'datetime')
     search_fields = ('room__name', 'wall_type__type_code')
 
 
 @admin.register(CeilingWorkVolume)
 class CeilingWorkVolumeAdmin(admin.ModelAdmin):
-    list_display = ('room', 'ceiling_type', 'volume', 'completion_percentage', 'unit')
-    list_filter = ('room', 'ceiling_type')
+    list_display = ('room', 'ceiling_type', 'volume', 'completion_percentage', 'unit', 'note', 'datetime')
+    list_filter = ('room', 'ceiling_type', 'datetime')
     search_fields = ('room__name', 'ceiling_type__type_code')
 
 

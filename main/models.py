@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.db import models
 
 
@@ -131,7 +133,7 @@ class FloorWorkVolume(WorkVolume):
     floor_type = models.ForeignKey(FloorType, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='floorworkvolume_volumes')
     note = models.TextField(null=True, blank=True)
-    datetime = models.DateTimeField(auto_now_add=True)
+    datetime = models.DateTimeField(auto_now_add=True, default=datetime.now)
     date_added = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -144,7 +146,7 @@ class WallWorkVolume(WorkVolume):
     wall_type = models.ForeignKey(WallType, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='wallworkvolume_volumes')
     note = models.TextField(null=True, blank=True)
-    datetime = models.DateTimeField(auto_now_add=True)
+    datetime = models.DateTimeField(auto_now_add=True, default=datetime.now)
     date_added = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -157,7 +159,7 @@ class CeilingWorkVolume(WorkVolume):
     ceiling_type = models.ForeignKey(CeilingType, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='ceilingworkvolume_volumes')
     note = models.TextField(null=True, blank=True)
-    datetime = models.DateTimeField(auto_now_add=True)
+    datetime = models.DateTimeField(auto_now_add=True, default=datetime.now)
     date_added = models.DateTimeField(blank=True, null=True)
 
     class Meta:

@@ -5,15 +5,22 @@ from .models import (
     WallType, WallWorkVolume,
     CeilingType, CeilingWorkVolume, Organization, Project
 )
-from import_export import resources
+from import_export import resources, fields, widgets
 
 
 # Resource для импорта/экспорта комнат
 class RoomResource(resources.ModelResource):
+    project = fields.Field(
+        column_name='project',
+        attribute='project',
+        widget=widgets.ForeignKeyWidget(Project, 'name')  # Указываем, что используем поле `name` модели Project
+    )
+
     class Meta:
         model = Room
-        fields = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area')
-        export_order = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling')
+        fields = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling','project')
+        export_order = (
+        'id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling', 'project')
 
 
 # Resource для импорта/экспорта типов отделки
@@ -112,9 +119,7 @@ class CeilingWorkVolumeAdmin(admin.ModelAdmin):
 class OrganizationAdmin(admin.ModelAdmin):
     list_display = ('name',)
 
+
 @admin.register(Project)
 class Project(admin.ModelAdmin):
     list_display = ('name', 'organization')
-
-
-

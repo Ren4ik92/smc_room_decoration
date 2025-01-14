@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from django.db import models
 
@@ -30,7 +29,7 @@ class Room(models.Model):
     """Модель помещения"""
     project = models.ForeignKey(Project, on_delete=models.CASCADE, default=None, verbose_name='Проект')
     code = models.CharField('Код', max_length=50, unique=True, blank=True)
-    block = models.CharField('Здание', max_length=10)
+    block = models.CharField('Здание', max_length=10, blank=True)
     floor = models.IntegerField('Этаж', blank=True)
     room_number = models.CharField('Номер помещения', max_length=50, blank=True)
     name = models.CharField('Наименование', max_length=255, blank=False)
@@ -133,7 +132,7 @@ class FloorWorkVolume(WorkVolume):
     floor_type = models.ForeignKey(FloorType, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='floorworkvolume_volumes')
     note = models.TextField(null=True, blank=True)
-    datetime = models.DateTimeField(auto_now_add=True, default=datetime.now)
+    datetime = models.DateTimeField(auto_now_add=True)
     date_added = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -146,7 +145,7 @@ class WallWorkVolume(WorkVolume):
     wall_type = models.ForeignKey(WallType, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='wallworkvolume_volumes')
     note = models.TextField(null=True, blank=True)
-    datetime = models.DateTimeField(auto_now_add=True, default=datetime.now)
+    datetime = models.DateTimeField(auto_now_add=True)
     date_added = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -159,7 +158,7 @@ class CeilingWorkVolume(WorkVolume):
     ceiling_type = models.ForeignKey(CeilingType, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='ceilingworkvolume_volumes')
     note = models.TextField(null=True, blank=True)
-    datetime = models.DateTimeField(auto_now_add=True, default=datetime.now)
+    datetime = models.DateTimeField(auto_now_add=True)
     date_added = models.DateTimeField(blank=True, null=True)
 
     class Meta:

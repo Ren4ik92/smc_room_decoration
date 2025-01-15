@@ -30,7 +30,23 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FloorWorkVolume
-        fields = ['id', 'floor_type', 'volume', 'completion_percentage', 'note', 'datetime']
+        fields = ['id', 'floor_type', 'volume', 'completion_percentage', 'note', 'datetime', 'date_added']
+
+    @staticmethod
+    def filter_and_sort_floor_volumes(volumes):
+        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
+        sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
+        latest_volumes = []
+        seen_floor_types = set()
+
+        # Добавляем только последний объем для каждого типа floor_type
+        for volume in sorted_volumes:
+            floor_type_id = volume['floor_type']['id']
+            if floor_type_id not in seen_floor_types:
+                latest_volumes.append(volume)
+                seen_floor_types.add(floor_type_id)
+
+        return latest_volumes
 
 
 class WallTypeReadSerializer(serializers.ModelSerializer):
@@ -47,7 +63,23 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WallWorkVolume
-        fields = ['id', 'wall_type', 'volume', 'completion_percentage', 'note', 'datetime']
+        fields = ['id', 'wall_type', 'volume', 'completion_percentage', 'note', 'datetime', 'date_added']
+
+    @staticmethod
+    def filter_and_sort_wall_volumes(volumes):
+        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
+        sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
+        latest_volumes = []
+        seen_wall_types = set()
+
+        # Добавляем только последний объем для каждого типа wall_type
+        for volume in sorted_volumes:
+            wall_type_id = volume['wall_type']['id']
+            if wall_type_id not in seen_wall_types:
+                latest_volumes.append(volume)
+                seen_wall_types.add(wall_type_id)
+
+        return latest_volumes
 
 
 class CeilingTypeReadSerializer(serializers.ModelSerializer):
@@ -64,7 +96,23 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CeilingWorkVolume
-        fields = ['id', 'ceiling_type', 'volume', 'completion_percentage', 'note', 'datetime']
+        fields = ['id', 'ceiling_type', 'volume', 'completion_percentage', 'note', 'datetime', 'date_added']
+
+    @staticmethod
+    def filter_and_sort_ceiling_volumes(volumes):
+        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
+        sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
+        latest_volumes = []
+        seen_ceiling_types = set()
+
+        # Добавляем только последний объем для каждого типа ceiling_type
+        for volume in sorted_volumes:
+            ceiling_type_id = volume['ceiling_type']['id']
+            if ceiling_type_id not in seen_ceiling_types:
+                latest_volumes.append(volume)
+                seen_ceiling_types.add(ceiling_type_id)
+
+        return latest_volumes
 
 
 class RoomReadSerializer(serializers.ModelSerializer):
@@ -74,11 +122,35 @@ class RoomReadSerializer(serializers.ModelSerializer):
     ceiling_volumes = CeilingWorkVolumeReadSerializer(many=True, source='ceilingworkvolume_volumes')
     organization = OrganizationReadSerializer()
     project = ProjectReadSerializer()
+    planned_floor_types = FloorTypeReadSerializer(many=True)
+    planned_wall_types = WallTypeReadSerializer(many=True)
+    planned_ceiling_types = CeilingTypeReadSerializer(many=True)
 
     class Meta:
         model = Room
-        fields = ['organization', 'project', 'id', 'name', 'area_floor', 'area_wall', 'area_ceiling',
-                  'floor_volumes', 'wall_volumes', 'ceiling_volumes']
+        fields = [
+            'organization', 'project', 'id', 'name', 'area_floor', 'area_wall', 'area_ceiling',
+            'floor_volumes', 'wall_volumes', 'ceiling_volumes',
+            'planned_floor_types', 'planned_wall_types', 'planned_ceiling_types'
+        ]
+
+    def to_representation(self, instance):
+        """Переопределяем метод для фильтрации объемов по последним добавленным данным"""
+        representation = super().to_representation(instance)
+
+        # Применяем фильтрацию для стен
+        representation['wall_volumes'] = WallWorkVolumeReadSerializer.filter_and_sort_wall_volumes(
+            representation['wall_volumes'])
+
+        # Применяем фильтрацию для полов
+        representation['floor_volumes'] = FloorWorkVolumeReadSerializer.filter_and_sort_floor_volumes(
+            representation['floor_volumes'])
+
+        # Применяем фильтрацию для потолков
+        representation['ceiling_volumes'] = CeilingWorkVolumeReadSerializer.filter_and_sort_ceiling_volumes(
+            representation['ceiling_volumes'])
+
+        return representation
 
 
 # Сериализаторы для записи (POST)
@@ -123,7 +195,7 @@ class RoomWriteSerializer(serializers.ModelSerializer):
         Создание новой комнаты с добавлением связанных объемов работ.
         """
         room = self.context['room']  # Получаем объект комнаты из контекста
-        #room_area = room.area  # Получаем площадь комнаты
+        # room_area = room.area  # Получаем площадь комнаты
 
         # Создаем объект комнаты
         room = Room.objects.create(**validated_data)
@@ -146,5 +218,3 @@ class RoomWriteSerializer(serializers.ModelSerializer):
         """
         for volume_data in volumes_data:
             model.objects.create(room=room, **volume_data)
-
-

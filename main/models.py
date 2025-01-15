@@ -1,4 +1,3 @@
-
 from django.db import models
 
 
@@ -23,29 +22,6 @@ class Project(models.Model):
     class Meta:
         verbose_name = 'Проект'
         verbose_name_plural = 'Проекты'
-
-
-class Room(models.Model):
-    """Модель помещения"""
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, default=None, verbose_name='Проект')
-    code = models.CharField('Код', max_length=50, unique=True, blank=True)
-    block = models.CharField('Здание', max_length=10, blank=True)
-    floor = models.IntegerField('Этаж', blank=True)
-    room_number = models.CharField('Номер помещения', max_length=50, blank=True)
-    name = models.CharField('Наименование', max_length=255, blank=False)
-    area_floor = models.FloatField('Площадь пола', default=1)
-    area_wall = models.FloatField('Площадь стен', default=1)
-    area_ceiling = models.FloatField('Площадь потолка', default=1)
-
-    def organization(self):
-        return self.project.organization if self.project else None
-
-    def __str__(self):
-        return f"{self.code} - {self.name}"
-
-    class Meta:
-        verbose_name = 'Помещение'
-        verbose_name_plural = 'Помещения'
 
 
 class WorkType(models.Model):
@@ -105,6 +81,38 @@ class CeilingType(models.Model):
     class Meta:
         verbose_name = 'Тип отделки потолка'
         verbose_name_plural = 'Типы отделки потолков'
+
+
+class Room(models.Model):
+    """Модель помещения"""
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, default=None, verbose_name='Проект')
+    code = models.CharField('Код', max_length=50, unique=True, blank=True)
+    block = models.CharField('Здание', max_length=10, blank=True)
+    floor = models.IntegerField('Этаж', blank=True)
+    room_number = models.CharField('Номер помещения', max_length=50, blank=True)
+    name = models.CharField('Наименование', max_length=255, blank=False)
+    area_floor = models.FloatField('Площадь пола', default=1)
+    area_wall = models.FloatField('Площадь стен', default=1)
+    area_ceiling = models.FloatField('Площадь потолка', default=1)
+    planned_floor_types = models.ManyToManyField(
+        FloorType, related_name="rooms_with_floor", verbose_name='Планируемые типы отделки пола', blank=True
+    )
+    planned_wall_types = models.ManyToManyField(
+        WallType, related_name="rooms_with_wall", verbose_name='Планируемые типы отделки стен', blank=True
+    )
+    planned_ceiling_types = models.ManyToManyField(
+        CeilingType, related_name="rooms_with_ceiling", verbose_name='Планируемые типы отделки потолков', blank=True
+    )
+
+    def organization(self):
+        return self.project.organization if self.project else None
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+    class Meta:
+        verbose_name = 'Помещение'
+        verbose_name_plural = 'Помещения'
 
 
 class WorkVolume(models.Model):

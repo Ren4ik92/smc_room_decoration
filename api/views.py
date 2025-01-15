@@ -41,6 +41,10 @@ class RoomViewSet(ModelViewSet):
         Добавление новых объемов для комнаты (пол, стены, потолок).
         """
         room = self.get_object()
+        # Проверка наличия планируемых типов отделки
+        if not room.planned_floor_types.exists() and not room.planned_wall_types.exists() and not room.planned_ceiling_types.exists():
+            raise ValidationError("Невозможно добавить объемы: у комнаты отсутствуют планируемые типы отделки.")
+
         # Проверка площади
         if room.area_floor == 0 and room.area_wall == 0 and room.area_ceiling == 0:
             raise ValidationError("Невозможно добавить объемы: все площади комнаты равны нулю.")
@@ -67,47 +71,87 @@ class RoomViewSet(ModelViewSet):
         """
         Обработка и создание объектов объемов работ для определенного типа.
         """
-        room_area = getattr(room, area_field)
+        room_area = getattr(room, area_field)  # Общая площадь комнаты для заданного типа (пол, стены, потолок)
+
+        # Проверяем, существует ли валидный тип модели
+        type_model_map = {
+            'floor_type': FloorType,
+            'wall_type': WallType,
+            'ceiling_type': CeilingType
+        }
+        if type_field not in type_model_map:
+            raise ValidationError(f"Неверный тип данных: {type_field}.")
+        type_model = type_model_map[type_field]
+
+        # Проверяем планируемые типы отделки
+        planned_types_map = {
+            'floor_type': room.planned_floor_types,
+            'wall_type': room.planned_wall_types,
+            'ceiling_type': room.planned_ceiling_types
+        }
+        planned_types = planned_types_map[type_field].all()
+
+        total_volume_requested = 0  # Общий объем, рассчитываемый для текущего запроса
 
         for volume_data in volumes_data:
-            # Проверяем, существует ли указанный тип отделки
+            # Проверяем существование типа отделки
             type_id = volume_data.get(type_field)
-            if not model.objects.filter(id=type_id).exists():
+            if not type_model.objects.filter(id=type_id).exists():
                 raise ValidationError(
                     {type_field: f"{type_field} с ID {type_id} не существует. Укажите корректный ID."}
                 )
 
-        # Получаем площадь из соответствующего поля
-        for volume_data in volumes_data:
+            # Проверяем, входит ли тип отделки в планируемые
+            if not planned_types.filter(id=type_id).exists():
+                raise ValidationError(
+                    {type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."}
+                )
+
+            # Проверяем параметры
             volume = volume_data.get('volume')
             completion_percentage = volume_data.get('completion_percentage')
-            note = volume_data.get('note', None)
 
-            # Проверка на одновременное указание двух параметров
             if volume is not None and completion_percentage is not None:
                 raise ValidationError("Необходимо передать либо volume, либо completion_percentage, но не оба.")
             if volume is None and completion_percentage is None:
                 raise ValidationError("Необходимо передать либо volume, либо completion_percentage.")
 
-            # Если указан процент, проверяем его допустимость
+            # Конвертируем процент в объем, если он указан
             if completion_percentage is not None:
                 if completion_percentage > 100:
                     raise ValidationError("Процент завершения не может превышать 100%.")
                 volume = (room_area * completion_percentage) / 100
 
-            # Если указан объем, проверяем его допустимость
+            # Проверяем, что объем корректен
             if volume is not None:
                 if volume > room_area:
-                    raise ValidationError(f"Объем не может превышать доступную площадь: {room_area}.")
+                    raise ValidationError(f"Объем не может превышать доступную площадь комнаты: {room_area} м².")
+
+            # Суммируем общий объем текущего запроса
+            total_volume_requested += volume
+
+        # Проверяем общий объем запроса против доступной площади комнаты
+        if total_volume_requested > room_area:
+            raise ValidationError(
+                f"Суммарный объем в запросе ({total_volume_requested:.2f} м²) превышает доступную площадь комнаты ({room_area} м²)."
+            )
+
+        # Если все проверки пройдены, создаем записи
+        for volume_data in volumes_data:
+            volume = volume_data.get('volume')
+            completion_percentage = volume_data.get('completion_percentage')
+            if completion_percentage is not None:
+                volume = (room_area * completion_percentage) / 100
+            if volume is not None:
                 completion_percentage = (volume / room_area) * 100
 
-            # Создаем запись в базе
             model.objects.create(
                 room=room,
                 **{type_field + '_id': volume_data[type_field]},
                 volume=volume,
                 completion_percentage=completion_percentage,
-                note=note
+                note=volume_data.get('note', None),
+                date_added=volume_data.get('date_added', None)
             )
 
 

@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.forms import ModelForm
+from django import forms
 from import_export.admin import ImportExportModelAdmin
 from .models import (
     Room, FloorType, FloorWorkVolume,
@@ -18,9 +20,11 @@ class RoomResource(resources.ModelResource):
 
     class Meta:
         model = Room
-        fields = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling','project')
+        fields = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling',
+                  'project', 'planned_wall_types', 'planned_floor_types', 'planned_ceiling_types')
         export_order = (
-        'id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling', 'project')
+        'id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling', 'project',
+        'planned_wall_types', 'planned_floor_types', 'planned_ceiling_types')
 
 
 # Resource для импорта/экспорта типов отделки
@@ -60,7 +64,15 @@ class CeilingWorkVolumeInline(admin.TabularInline):
     model = CeilingWorkVolume
     extra = 1
 
-
+class RoomForm(ModelForm):
+    class Meta:
+        model = Room
+        fields = '__all__'
+        widgets = {
+            'planned_floor_types': forms.CheckboxSelectMultiple,
+            'planned_wall_types': forms.CheckboxSelectMultiple,
+            'planned_ceiling_types': forms.CheckboxSelectMultiple,
+        }
 # Админка для комнат
 @admin.register(Room)
 class RoomAdmin(ImportExportModelAdmin):
@@ -70,6 +82,7 @@ class RoomAdmin(ImportExportModelAdmin):
     list_filter = ('block', 'floor')
     inlines = [FloorWorkVolumeInline, WallWorkVolumeInline, CeilingWorkVolumeInline]
 
+    filter_horizontal = ('planned_floor_types', 'planned_wall_types', 'planned_ceiling_types')
 
 # Админка для типов отделки
 @admin.register(FloorType)

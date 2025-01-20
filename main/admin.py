@@ -109,21 +109,24 @@ class CeilingTypeAdmin(ImportExportModelAdmin):
 # Админка для объемов отделки
 @admin.register(FloorWorkVolume)
 class FloorWorkVolumeAdmin(admin.ModelAdmin):
-    list_display = ('room', 'floor_type', 'volume', 'completion_percentage', 'unit', 'note', 'datetime')
+    list_display = ('room', 'floor_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
+                    'clean_completion_percentage', 'unit', 'note', 'datetime')
     list_filter = ('room', 'floor_type', 'datetime')
     search_fields = ('room__name', 'floor_type__type_code')
 
 
 @admin.register(WallWorkVolume)
 class WallWorkVolumeAdmin(admin.ModelAdmin):
-    list_display = ('room', 'wall_type', 'volume', 'completion_percentage', 'unit', 'note', 'datetime')
+    list_display = ('room', 'wall_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
+                    'clean_completion_percentage', 'unit', 'note', 'datetime')
     list_filter = ('room', 'wall_type', 'datetime')
     search_fields = ('room__name', 'wall_type__type_code')
 
 
 @admin.register(CeilingWorkVolume)
 class CeilingWorkVolumeAdmin(admin.ModelAdmin):
-    list_display = ('room', 'ceiling_type', 'volume', 'completion_percentage', 'unit', 'note', 'datetime')
+    list_display = ('room', 'ceiling_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
+                    'clean_completion_percentage', 'unit', 'note', 'datetime')
     list_filter = ('room', 'ceiling_type', 'datetime')
     search_fields = ('room__name', 'ceiling_type__type_code')
 

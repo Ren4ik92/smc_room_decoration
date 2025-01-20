@@ -118,15 +118,21 @@ class Room(models.Model):
 class WorkVolume(models.Model):
     """Базовая модель объема отделки"""
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="%(class)s_volumes")
-    # element_number = models.IntegerField('Номер элемента')
-    volume = models.FloatField('Объем (м²)', default=0)  # Общий объем
-    completion_percentage = models.FloatField('Процент выполнения', default=0)  # В процентах
+    rough_volume = models.FloatField('Объем черновой отделки (м²)', default=0)  # Объем черновой отделки
+    clean_volume = models.FloatField('Объем чистовой отделки (м²)', default=0)  # Объем чистовой отделки
+    rough_completion_percentage = models.FloatField('Процент выполнения черновой отделки', default=0)  # В процентах
+    clean_completion_percentage = models.FloatField('Процент выполнения чистовой отделки', default=0)  # В процентах
     unit = models.CharField('Ед. изм.', max_length=10, default='м²')
 
     @property
-    def completed_volume(self):
-        """Вычисляет выполненный объем"""
-        return (self.volume * self.completion_percentage) / 100
+    def rough_completed_volume(self):
+        """Вычисляет выполненный объем черновой отделки"""
+        return (self.rough_volume * self.rough_completion_percentage) / 100
+
+    @property
+    def clean_completed_volume(self):
+        """Вычисляет выполненный объем чистовой отделки"""
+        return (self.clean_volume * self.clean_completion_percentage) / 100
 
     def __str__(self):
         return f"{self.__class__.__name__} in {self.room}"

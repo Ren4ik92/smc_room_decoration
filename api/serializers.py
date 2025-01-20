@@ -30,7 +30,9 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FloorWorkVolume
-        fields = ['id', 'floor_type', 'volume', 'completion_percentage', 'note', 'datetime', 'date_added']
+        fields = ['id', 'floor_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
+                  'clean_completion_percentage',
+                  'note', 'datetime', 'date_added']
 
     @staticmethod
     def filter_and_sort_floor_volumes(volumes):
@@ -63,7 +65,8 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WallWorkVolume
-        fields = ['id', 'wall_type', 'volume', 'completion_percentage', 'note', 'datetime', 'date_added']
+        fields = ['id', 'wall_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
+                  'clean_completion_percentage', 'note', 'datetime', 'date_added']
 
     @staticmethod
     def filter_and_sort_wall_volumes(volumes):
@@ -96,7 +99,8 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CeilingWorkVolume
-        fields = ['id', 'ceiling_type', 'volume', 'completion_percentage', 'note', 'datetime', 'date_added']
+        fields = ['id', 'ceiling_type', 'rough_volume', 'clean_volume',
+                  'rough_completion_percentage', 'clean_completion_percentage', 'note', 'datetime', 'date_added']
 
     @staticmethod
     def filter_and_sort_ceiling_volumes(volumes):
@@ -160,7 +164,8 @@ class FloorWorkVolumeWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FloorWorkVolume
-        fields = ['floor_type', 'volume', 'completion_percentage', 'note', 'date_added']
+        fields = ['floor_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
+                  'clean_completion_percentage', 'note', 'date_added']
 
 
 class WallWorkVolumeWriteSerializer(serializers.ModelSerializer):
@@ -169,7 +174,8 @@ class WallWorkVolumeWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WallWorkVolume
-        fields = ['wall_type', 'volume', 'completion_percentage', 'note', 'date_added']
+        fields = ['wall_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
+                  'clean_completion_percentage', 'note', 'date_added']
 
 
 class CeilingWorkVolumeWriteSerializer(serializers.ModelSerializer):
@@ -178,7 +184,8 @@ class CeilingWorkVolumeWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CeilingWorkVolume
-        fields = ['ceiling_type', 'volume', 'completion_percentage', 'note', 'date_added']
+        fields = ['ceiling_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
+                  'clean_completion_percentage', 'note', 'date_added']
 
 
 class RoomWriteSerializer(serializers.ModelSerializer):

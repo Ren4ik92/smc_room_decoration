@@ -68,12 +68,8 @@ class RoomViewSet(ModelViewSet):
         return Response({'status': 'volumes added'}, status=status.HTTP_201_CREATED)
 
     def _process_volumes(self, room, volumes_data, model, area_field, type_field):
-        """
-        Обработка и создание объектов объемов работ для определенного типа.
-        """
-        room_area = getattr(room, area_field)  # Общая площадь комнаты для заданного типа (пол, стены, потолок)
+        room_area = getattr(room, area_field)
 
-        # Проверяем, существует ли валидный тип модели
         type_model_map = {
             'floor_type': FloorType,
             'wall_type': WallType,
@@ -83,7 +79,6 @@ class RoomViewSet(ModelViewSet):
             raise ValidationError(f"Неверный тип данных: {type_field}.")
         type_model = type_model_map[type_field]
 
-        # Проверяем планируемые типы отделки
         planned_types_map = {
             'floor_type': room.planned_floor_types,
             'wall_type': room.planned_wall_types,
@@ -91,65 +86,93 @@ class RoomViewSet(ModelViewSet):
         }
         planned_types = planned_types_map[type_field].all()
 
-        total_volume_requested = 0  # Общий объем, рассчитываемый для текущего запроса
+        total_rough_volume_requested = 0
+        total_clean_volume_requested = 0
 
         for volume_data in volumes_data:
-            # Проверяем существование типа отделки
             type_id = volume_data.get(type_field)
             if not type_model.objects.filter(id=type_id).exists():
-                raise ValidationError(
-                    {type_field: f"{type_field} с ID {type_id} не существует. Укажите корректный ID."}
-                )
+                raise ValidationError({type_field: f"{type_field} с ID {type_id} не существует. Укажите корректный ID."})
 
-            # Проверяем, входит ли тип отделки в планируемые
             if not planned_types.filter(id=type_id).exists():
+                raise ValidationError({type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."})
+
+            rough_volume = volume_data.get('rough_volume', 0)
+            clean_volume = volume_data.get('clean_volume', 0)
+            rough_completion_percentage = volume_data.get('rough_completion_percentage', 0)
+            clean_completion_percentage = volume_data.get('clean_completion_percentage', 0)
+
+            # Проверяем, что одновременно не переданы объем и процент завершения
+            if rough_volume and rough_completion_percentage:
                 raise ValidationError(
-                    {type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."}
+                    "Нельзя передать одновременно rough_volume и rough_completion_percentage. Укажите только одно из них."
+                )
+            if clean_volume and clean_completion_percentage:
+                raise ValidationError(
+                    "Нельзя передать одновременно clean_volume и clean_completion_percentage. Укажите только одно из них."
                 )
 
-            # Проверяем параметры
-            volume = volume_data.get('volume')
-            completion_percentage = volume_data.get('completion_percentage')
+            # Проверяем, что хотя бы одно значение передано
+            if not rough_volume and not rough_completion_percentage:
+                raise ValidationError(
+                    "Необходимо указать хотя бы одно из rough_volume или rough_completion_percentage."
+                )
+            if not clean_volume and not clean_completion_percentage:
+                raise ValidationError(
+                    "Необходимо указать хотя бы одно из clean_volume или clean_completion_percentage."
+                )
 
-            if volume is not None and completion_percentage is not None:
-                raise ValidationError("Необходимо передать либо volume, либо completion_percentage, но не оба.")
-            if volume is None and completion_percentage is None:
-                raise ValidationError("Необходимо передать либо volume, либо completion_percentage.")
+            if rough_completion_percentage:
+                rough_volume = (room_area * rough_completion_percentage) / 100
+            if clean_completion_percentage:
+                clean_volume = (room_area * clean_completion_percentage) / 100
 
-            # Конвертируем процент в объем, если он указан
-            if completion_percentage is not None:
-                if completion_percentage > 100:
-                    raise ValidationError("Процент завершения не может превышать 100%.")
-                volume = (room_area * completion_percentage) / 100
+            if rough_volume > room_area:
+                raise ValidationError(
+                    f"Черновой объем ({rough_volume} м²) не может превышать площадь комнаты ({room_area} м²)."
+                )
+            if clean_volume > room_area:
+                raise ValidationError(
+                    f"Чистовой объем ({clean_volume} м²) не может превышать площадь комнаты ({room_area} м²)."
+                )
 
-            # Проверяем, что объем корректен
-            if volume is not None:
-                if volume > room_area:
-                    raise ValidationError(f"Объем не может превышать доступную площадь комнаты: {room_area} м².")
+            total_rough_volume_requested += rough_volume
+            total_clean_volume_requested += clean_volume
 
-            # Суммируем общий объем текущего запроса
-            total_volume_requested += volume
-
-        # Проверяем общий объем запроса против доступной площади комнаты
-        if total_volume_requested > room_area:
+        if total_rough_volume_requested > room_area:
             raise ValidationError(
-                f"Суммарный объем в запросе ({total_volume_requested:.2f} м²) превышает доступную площадь комнаты ({room_area} м²)."
+                f"Суммарный черновой объем в запросе ({total_rough_volume_requested:.2f} м²) "
+                f"превышает площадь комнаты ({room_area} м²)."
+            )
+        if total_clean_volume_requested > room_area:
+            raise ValidationError(
+                f"Суммарный чистовой объем в запросе ({total_clean_volume_requested:.2f} м²) "
+                f"превышает площадь комнаты ({room_area} м²)."
             )
 
-        # Если все проверки пройдены, создаем записи
         for volume_data in volumes_data:
-            volume = volume_data.get('volume')
-            completion_percentage = volume_data.get('completion_percentage')
-            if completion_percentage is not None:
-                volume = (room_area * completion_percentage) / 100
-            if volume is not None:
-                completion_percentage = (volume / room_area) * 100
+            rough_volume = volume_data.get('rough_volume', 0)
+            clean_volume = volume_data.get('clean_volume', 0)
+            rough_completion_percentage = volume_data.get('rough_completion_percentage', 0)
+            clean_completion_percentage = volume_data.get('clean_completion_percentage', 0)
+
+            if rough_completion_percentage:
+                rough_volume = (room_area * rough_completion_percentage) / 100
+            if clean_completion_percentage:
+                clean_volume = (room_area * clean_completion_percentage) / 100
+
+            if rough_volume:
+                rough_completion_percentage = (rough_volume / room_area) * 100
+            if clean_volume:
+                clean_completion_percentage = (clean_volume / room_area) * 100
 
             model.objects.create(
                 room=room,
                 **{type_field + '_id': volume_data[type_field]},
-                volume=volume,
-                completion_percentage=completion_percentage,
+                rough_volume=rough_volume,
+                clean_volume=clean_volume,
+                rough_completion_percentage=rough_completion_percentage,
+                clean_completion_percentage=clean_completion_percentage,
                 note=volume_data.get('note', None),
                 date_added=volume_data.get('date_added', None)
             )

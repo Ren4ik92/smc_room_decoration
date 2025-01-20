@@ -92,10 +92,12 @@ class RoomViewSet(ModelViewSet):
         for volume_data in volumes_data:
             type_id = volume_data.get(type_field)
             if not type_model.objects.filter(id=type_id).exists():
-                raise ValidationError({type_field: f"{type_field} с ID {type_id} не существует. Укажите корректный ID."})
+                raise ValidationError(
+                    {type_field: f"{type_field} с ID {type_id} не существует. Укажите корректный ID."})
 
             if not planned_types.filter(id=type_id).exists():
-                raise ValidationError({type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."})
+                raise ValidationError(
+                    {type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."})
 
             rough_volume = volume_data.get('rough_volume', 0)
             clean_volume = volume_data.get('clean_volume', 0)
@@ -129,26 +131,22 @@ class RoomViewSet(ModelViewSet):
 
             if rough_volume > room_area:
                 raise ValidationError(
-                    f"Черновой объем ({rough_volume} м²) не может превышать площадь комнаты ({room_area} м²)."
+                    f"Черновой объем ({rough_volume:.2f} м²) не может превышать площадь комнаты ({room_area:.2f} м²)."
                 )
             if clean_volume > room_area:
                 raise ValidationError(
-                    f"Чистовой объем ({clean_volume} м²) не может превышать площадь комнаты ({room_area} м²)."
+                    f"Чистовой объем ({clean_volume:.2f} м²) не может превышать площадь комнаты ({room_area:.2f} м²)."
                 )
 
             total_rough_volume_requested += rough_volume
             total_clean_volume_requested += clean_volume
 
-        if total_rough_volume_requested > room_area:
-            raise ValidationError(
-                f"Суммарный черновой объем в запросе ({total_rough_volume_requested:.2f} м²) "
-                f"превышает площадь комнаты ({room_area} м²)."
-            )
-        if total_clean_volume_requested > room_area:
-            raise ValidationError(
-                f"Суммарный чистовой объем в запросе ({total_clean_volume_requested:.2f} м²) "
-                f"превышает площадь комнаты ({room_area} м²)."
-            )
+            # Проверка на превышение двойной площади комнаты
+            if total_rough_volume_requested + total_clean_volume_requested > room_area * 2:
+                raise ValidationError(
+                    f"Суммарный объем (черновой + чистовой) в запросе превышает максимально допустимый "
+                    f"двойной объем площади комнаты ({room_area * 2:.2f} м²)."
+                )
 
         for volume_data in volumes_data:
             rough_volume = volume_data.get('rough_volume', 0)

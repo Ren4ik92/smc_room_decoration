@@ -133,7 +133,7 @@ class RoomReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
         fields = [
-            'organization', 'project', 'id', 'name', 'area_floor', 'area_wall', 'area_ceiling',
+            'organization', 'project', 'id', 'name', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling',
             'floor_volumes', 'wall_volumes', 'ceiling_volumes',
             'planned_floor_types', 'planned_wall_types', 'planned_ceiling_types'
         ]

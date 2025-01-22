@@ -32,7 +32,7 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
         model = FloorWorkVolume
         fields = ['id', 'floor_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
                   'clean_completion_percentage',
-                  'note', 'datetime', 'date_added']
+                  'note', 'datetime', 'date_added', 'remaining_clean', 'remaining_rough']
 
     @staticmethod
     def filter_and_sort_floor_volumes(volumes):
@@ -66,7 +66,7 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = WallWorkVolume
         fields = ['id', 'wall_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
-                  'clean_completion_percentage', 'note', 'datetime', 'date_added']
+                  'clean_completion_percentage', 'note', 'datetime', 'date_added', 'remaining_clean', 'remaining_rough']
 
     @staticmethod
     def filter_and_sort_wall_volumes(volumes):
@@ -100,7 +100,8 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = CeilingWorkVolume
         fields = ['id', 'ceiling_type', 'rough_volume', 'clean_volume',
-                  'rough_completion_percentage', 'clean_completion_percentage', 'note', 'datetime', 'date_added']
+                  'rough_completion_percentage', 'clean_completion_percentage', 'note', 'datetime', 'date_added',
+                  'remaining_clean', 'remaining_rough']
 
     @staticmethod
     def filter_and_sort_ceiling_volumes(volumes):

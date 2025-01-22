@@ -151,6 +151,9 @@ class RoomViewSet(ModelViewSet):
             if clean_completion_percentage and not clean_volume:
                 clean_volume = (planned_clean_volume * clean_completion_percentage) / 100
 
+            # Вычисляем остатки
+            remaining_rough = planned_rough_volume - rough_volume
+            remaining_clean = planned_clean_volume - clean_volume
             # Проверяем, что объемы не превышают планируемые значения
             if rough_volume > planned_rough_volume:
                 raise ValidationError(
@@ -172,7 +175,9 @@ class RoomViewSet(ModelViewSet):
                 rough_completion_percentage=rough_completion_percentage,
                 clean_completion_percentage=clean_completion_percentage,
                 note=volume_data.get('note', None),
-                date_added=volume_data.get('date_added', None)
+                date_added=volume_data.get('date_added', None),
+                remaining_rough=remaining_rough,  # Сохраняем остаток
+                remaining_clean=remaining_clean  # Сохраняем остаток
             )
 
 

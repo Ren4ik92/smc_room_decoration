@@ -172,6 +172,9 @@ class FloorWorkVolume(WorkVolume):
     note = models.TextField(null=True, blank=True)
     datetime = models.DateTimeField(auto_now_add=True)
     date_added = models.DateTimeField(blank=True, null=True)
+    remaining_rough = models.FloatField('Остаток черновой отделки (м²)', default=0)
+    remaining_clean = models.FloatField('Остаток чистовой отделки (м²)', default=0)
+
 
     class Meta:
         verbose_name = 'Объем отделки пола'
@@ -185,6 +188,8 @@ class WallWorkVolume(WorkVolume):
     note = models.TextField(null=True, blank=True)
     datetime = models.DateTimeField(auto_now_add=True)
     date_added = models.DateTimeField(blank=True, null=True)
+    remaining_rough = models.FloatField('Остаток черновой отделки (м²)', default=0)
+    remaining_clean = models.FloatField('Остаток чистовой отделки (м²)', default=0)
 
     class Meta:
         verbose_name = 'Объем отделки стен'
@@ -198,6 +203,8 @@ class CeilingWorkVolume(WorkVolume):
     note = models.TextField(null=True, blank=True)
     datetime = models.DateTimeField(auto_now_add=True)
     date_added = models.DateTimeField(blank=True, null=True)
+    remaining_rough = models.FloatField('Остаток черновой отделки (м²)', default=0)
+    remaining_clean = models.FloatField('Остаток чистовой отделки (м²)', default=0)
 
     class Meta:
         verbose_name = 'Объем отделки потолков'

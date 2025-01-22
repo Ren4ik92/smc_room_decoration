@@ -91,70 +91,55 @@ class RoomViewSet(ModelViewSet):
                     {type_field: f"{type_field} с ID {type_id} не существует. Укажите корректный ID."}
                 )
 
-            # Проверка наличия типа в планируемых
             if type_field == 'floor_type':
                 if not room.floor_types.filter(floor_type_id=type_id).exists():
                     raise ValidationError({
-                                              type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."})
+                        type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."
+                    })
                 planned_type = room.floor_types.get(floor_type_id=type_id)
             elif type_field == 'wall_type':
                 if not room.wall_types.filter(wall_type_id=type_id).exists():
                     raise ValidationError({
-                                              type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."})
+                        type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."
+                    })
                 planned_type = room.wall_types.get(wall_type_id=type_id)
             elif type_field == 'ceiling_type':
                 if not room.ceiling_types.filter(ceiling_type_id=type_id).exists():
                     raise ValidationError({
-                                              type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."})
+                        type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."
+                    })
                 planned_type = room.ceiling_types.get(ceiling_type_id=type_id)
             else:
                 raise ValidationError(f"Неожиданный тип поля: {type_field}")
 
-            # Получаем планируемые объемы для черновой и чистовой отделки
             planned_rough_volume = planned_type.area_rough
             planned_clean_volume = planned_type.area_clean
 
-            rough_volume = volume_data.get('rough_volume', 0)
-            clean_volume = volume_data.get('clean_volume', 0)
-            rough_completion_percentage = volume_data.get('rough_completion_percentage', 0)
-            clean_completion_percentage = volume_data.get('clean_completion_percentage', 0)
-
-            # Проверяем, что одновременно не переданы объем и процент завершения
-            if rough_volume and rough_completion_percentage:
-                raise ValidationError(
-                    "Нельзя передать одновременно rough_volume и rough_completion_percentage. Укажите только одно из них."
-                )
-            if clean_volume and clean_completion_percentage:
-                raise ValidationError(
-                    "Нельзя передать одновременно clean_volume и clean_completion_percentage. Укажите только одно из них."
-                )
+            rough_volume = volume_data.get('rough_volume')
+            clean_volume = volume_data.get('clean_volume')
+            rough_completion_percentage = volume_data.get('rough_completion_percentage')
+            clean_completion_percentage = volume_data.get('clean_completion_percentage')
 
             # Проверяем, что хотя бы одно значение передано
-            if not rough_volume and not rough_completion_percentage:
+            if rough_volume is None and rough_completion_percentage is None:
                 raise ValidationError(
                     "Необходимо указать хотя бы одно из rough_volume или rough_completion_percentage."
                 )
-            if not clean_volume and not clean_completion_percentage:
+            if clean_volume is None and clean_completion_percentage is None:
                 raise ValidationError(
                     "Необходимо указать хотя бы одно из clean_volume или clean_completion_percentage."
                 )
 
-            # Рассчитываем проценты на основе объема
-            if rough_volume and not rough_completion_percentage:
+            if rough_volume is not None and rough_completion_percentage is None:
                 rough_completion_percentage = (rough_volume / planned_rough_volume) * 100 if planned_rough_volume else 0
-            if clean_volume and not clean_completion_percentage:
+            if clean_volume is not None and clean_completion_percentage is None:
                 clean_completion_percentage = (clean_volume / planned_clean_volume) * 100 if planned_clean_volume else 0
 
-            # Рассчитываем объемы на основе процента завершения если они переданы
-            if rough_completion_percentage and not rough_volume:
+            if rough_completion_percentage is not None and rough_volume is None:
                 rough_volume = (planned_rough_volume * rough_completion_percentage) / 100
-            if clean_completion_percentage and not clean_volume:
+            if clean_completion_percentage is not None and clean_volume is None:
                 clean_volume = (planned_clean_volume * clean_completion_percentage) / 100
 
-            # Вычисляем остатки
-            remaining_rough = planned_rough_volume - rough_volume
-            remaining_clean = planned_clean_volume - clean_volume
-            # Проверяем, что объемы не превышают планируемые значения
             if rough_volume > planned_rough_volume:
                 raise ValidationError(
                     f"Черновой объем ({rough_volume:.2f} м²) превышает планируемый объем "
@@ -166,7 +151,9 @@ class RoomViewSet(ModelViewSet):
                     f"({planned_clean_volume:.2f} м²) для типа {type_field}."
                 )
 
-            # Создаём записи объемов
+            remaining_rough = planned_rough_volume - rough_volume
+            remaining_clean = planned_clean_volume - clean_volume
+
             model.objects.create(
                 room=room,
                 **{type_field + '_id': volume_data[type_field]},
@@ -176,8 +163,8 @@ class RoomViewSet(ModelViewSet):
                 clean_completion_percentage=clean_completion_percentage,
                 note=volume_data.get('note', None),
                 date_added=volume_data.get('date_added', None),
-                remaining_rough=remaining_rough,  # Сохраняем остаток
-                remaining_clean=remaining_clean  # Сохраняем остаток
+                remaining_rough=remaining_rough,
+                remaining_clean=remaining_clean
             )
 
 

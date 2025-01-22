@@ -5,7 +5,7 @@ from import_export.admin import ImportExportModelAdmin
 from .models import (
     Room, FloorType, FloorWorkVolume,
     WallType, WallWorkVolume,
-    CeilingType, CeilingWorkVolume, Organization, Project
+    CeilingType, CeilingWorkVolume, Organization, Project, RoomFloorType, RoomWallType, RoomCeilingType
 )
 from import_export import resources, fields, widgets
 
@@ -23,8 +23,8 @@ class RoomResource(resources.ModelResource):
         fields = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling',
                   'project', 'planned_wall_types', 'planned_floor_types', 'planned_ceiling_types')
         export_order = (
-        'id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling', 'project',
-        'planned_wall_types', 'planned_floor_types', 'planned_ceiling_types')
+            'id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling', 'project',
+            'planned_wall_types', 'planned_floor_types', 'planned_ceiling_types')
 
 
 # Resource для импорта/экспорта типов отделки
@@ -49,40 +49,34 @@ class CeilingTypeResource(resources.ModelResource):
         export_order = ('id', 'type_code', 'description', 'rough_finish', 'clean_finish')
 
 
-# Инлайн для объема отделки
-class FloorWorkVolumeInline(admin.TabularInline):
-    model = FloorWorkVolume
+# Инлайн-формы для добавления типов отделки и площади (с учетом черновой и чистовой отделки)
+class RoomFloorTypeInline(admin.TabularInline):
+    model = RoomFloorType
+    extra = 1  # Количество пустых форм для добавления новых записей
+    fields = ('floor_type', 'area_rough', 'area_clean')  # Поля для отображения (черновая и чистовая отделка)
+
+
+class RoomWallTypeInline(admin.TabularInline):
+    model = RoomWallType
     extra = 1
+    fields = ('wall_type', 'area_rough', 'area_clean')  # Поля для отображения (черновая и чистовая отделка)
 
 
-class WallWorkVolumeInline(admin.TabularInline):
-    model = WallWorkVolume
+class RoomCeilingTypeInline(admin.TabularInline):
+    model = RoomCeilingType
     extra = 1
+    fields = ('ceiling_type', 'area_rough', 'area_clean')  # Поля для отображения (черновая и чистовая отделка)
 
 
-class CeilingWorkVolumeInline(admin.TabularInline):
-    model = CeilingWorkVolume
-    extra = 1
-
-class RoomForm(ModelForm):
-    class Meta:
-        model = Room
-        fields = '__all__'
-        widgets = {
-            'planned_floor_types': forms.CheckboxSelectMultiple,
-            'planned_wall_types': forms.CheckboxSelectMultiple,
-            'planned_ceiling_types': forms.CheckboxSelectMultiple,
-        }
-# Админка для комнат
+# Админка для комнат с учетом промежуточных моделей для типов отделки
 @admin.register(Room)
 class RoomAdmin(ImportExportModelAdmin):
     resource_class = RoomResource
-    list_display = ('code', 'name', 'block', 'floor', 'area_floor', 'area_wall', 'area_ceiling')
+    list_display = ('name', 'code', 'block', 'floor', 'area_floor', 'area_wall', 'area_ceiling')
     search_fields = ('code', 'name', 'block', 'room_number')
     list_filter = ('block', 'floor')
-    inlines = [FloorWorkVolumeInline, WallWorkVolumeInline, CeilingWorkVolumeInline]
+    inlines = [RoomFloorTypeInline, RoomWallTypeInline, RoomCeilingTypeInline]
 
-    filter_horizontal = ('planned_floor_types', 'planned_wall_types', 'planned_ceiling_types')
 
 # Админка для типов отделки
 @admin.register(FloorType)

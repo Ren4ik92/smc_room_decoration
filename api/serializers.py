@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from main.models import Room, FloorWorkVolume, WallWorkVolume, CeilingWorkVolume, FloorType, WallType, CeilingType, \
-    Organization, Project
+    Organization, Project, RoomFloorType, RoomWallType, RoomCeilingType
 
 
 # Сериализаторы для чтения (GET)
@@ -119,23 +119,52 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
         return latest_volumes
 
 
+class RoomFloorTypeReadSerializer(serializers.ModelSerializer):
+    """Сериализатор для чтения данных о типах отделки пола для конкретной комнаты с указанием площади"""
+    floor_type = FloorTypeReadSerializer()
+
+    class Meta:
+        model = RoomFloorType
+        fields = ['floor_type', 'area_rough', 'area_clean']  # Площади для черновой и чистовой отделки
+
+
+class RoomWallTypeReadSerializer(serializers.ModelSerializer):
+    """Сериализатор для чтения данных о типах отделки стен для конкретной комнаты с указанием площади"""
+    wall_type = WallTypeReadSerializer()
+
+    class Meta:
+        model = RoomWallType
+        fields = ['wall_type', 'area_rough', 'area_clean']  # Площади для черновой и чистовой отделки
+
+
+class RoomCeilingTypeReadSerializer(serializers.ModelSerializer):
+    """Сериализатор для чтения данных о типах отделки потолков для конкретной комнаты с указанием площади"""
+    ceiling_type = CeilingTypeReadSerializer()  # Исправлено имя поля
+
+    class Meta:
+        model = RoomCeilingType
+        fields = ['ceiling_type', 'area_rough', 'area_clean']  # Поле `ceiling_type` добавлено корректно
+
+
+
 class RoomReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения данных о комнатах"""
     floor_volumes = FloorWorkVolumeReadSerializer(many=True, source='floorworkvolume_volumes')
     wall_volumes = WallWorkVolumeReadSerializer(many=True, source='wallworkvolume_volumes')
     ceiling_volumes = CeilingWorkVolumeReadSerializer(many=True, source='ceilingworkvolume_volumes')
+    planning_type_floor = RoomFloorTypeReadSerializer(many=True, source='floor_types')
+    planning_type_wall = RoomWallTypeReadSerializer(many=True, source='wall_types')
+    planning_type_ceiling = RoomCeilingTypeReadSerializer(many=True, source='ceiling_types')
     organization = OrganizationReadSerializer()
     project = ProjectReadSerializer()
-    planned_floor_types = FloorTypeReadSerializer(many=True)
-    planned_wall_types = WallTypeReadSerializer(many=True)
-    planned_ceiling_types = CeilingTypeReadSerializer(many=True)
 
     class Meta:
         model = Room
         fields = [
-            'organization', 'project', 'id', 'name', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling',
-            'floor_volumes', 'wall_volumes', 'ceiling_volumes',
-            'planned_floor_types', 'planned_wall_types', 'planned_ceiling_types'
+            'organization', 'project', 'id', 'name', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor',
+            'area_wall', 'area_ceiling',
+            'floor_volumes', 'wall_volumes', 'ceiling_volumes', 'planning_type_floor', 'planning_type_wall',
+            'planning_type_ceiling'
         ]
 
     def to_representation(self, instance):

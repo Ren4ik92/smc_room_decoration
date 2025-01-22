@@ -130,15 +130,19 @@ class RoomViewSet(ModelViewSet):
                     "Необходимо указать хотя бы одно из clean_volume или clean_completion_percentage."
                 )
 
+            # Рассчитываем проценты на основе объема
             if rough_volume is not None and rough_completion_percentage is None:
-                rough_completion_percentage = (rough_volume / planned_rough_volume) * 100 if planned_rough_volume else 0
+                rough_completion_percentage = round((rough_volume / planned_rough_volume) * 100,
+                                                    2) if planned_rough_volume else 0
             if clean_volume is not None and clean_completion_percentage is None:
-                clean_completion_percentage = (clean_volume / planned_clean_volume) * 100 if planned_clean_volume else 0
+                clean_completion_percentage = round((clean_volume / planned_clean_volume) * 100,
+                                                    2) if planned_clean_volume else 0
 
+            # Рассчитываем объемы на основе процента завершения, если они переданы
             if rough_completion_percentage is not None and rough_volume is None:
-                rough_volume = (planned_rough_volume * rough_completion_percentage) / 100
+                rough_volume = round((planned_rough_volume * rough_completion_percentage) / 100, 2)
             if clean_completion_percentage is not None and clean_volume is None:
-                clean_volume = (planned_clean_volume * clean_completion_percentage) / 100
+                clean_volume = round((planned_clean_volume * clean_completion_percentage) / 100, 2)
 
             if rough_volume > planned_rough_volume:
                 raise ValidationError(

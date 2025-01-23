@@ -68,6 +68,22 @@ class RoomCeilingTypeInline(admin.TabularInline):
     fields = ('ceiling_type', 'area_rough', 'area_clean')  # Поля для отображения (черновая и чистовая отделка)
 
 
+# Инлайн для объема отделки
+class FloorWorkVolumeInline(admin.TabularInline):
+    model = FloorWorkVolume
+    extra = 1
+
+
+class WallWorkVolumeInline(admin.TabularInline):
+    model = WallWorkVolume
+    extra = 1
+
+
+class CeilingWorkVolumeInline(admin.TabularInline):
+    model = CeilingWorkVolume
+    extra = 1
+
+
 # Админка для комнат с учетом промежуточных моделей для типов отделки
 @admin.register(Room)
 class RoomAdmin(ImportExportModelAdmin):
@@ -75,7 +91,8 @@ class RoomAdmin(ImportExportModelAdmin):
     list_display = ('name', 'code', 'block', 'floor', 'area_floor', 'area_wall', 'area_ceiling')
     search_fields = ('code', 'name', 'block', 'room_number')
     list_filter = ('block', 'floor')
-    inlines = [RoomFloorTypeInline, RoomWallTypeInline, RoomCeilingTypeInline]
+    inlines = [RoomFloorTypeInline, RoomWallTypeInline, RoomCeilingTypeInline,
+               FloorWorkVolumeInline, WallWorkVolumeInline, CeilingWorkVolumeInline]
 
 
 # Админка для типов отделки

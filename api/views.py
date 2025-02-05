@@ -10,6 +10,7 @@ from .serializers import (
     FloorWorkVolumeWriteSerializer,
     WallWorkVolumeWriteSerializer,
     CeilingWorkVolumeWriteSerializer, FloorTypeReadSerializer, WallTypeReadSerializer, CeilingTypeReadSerializer,
+    FloorWorkVolumeReadSerializer, WallWorkVolumeReadSerializer, CeilingWorkVolumeReadSerializer,
 )
 
 
@@ -170,6 +171,34 @@ class RoomViewSet(ModelViewSet):
                 remaining_rough=remaining_rough,
                 remaining_clean=remaining_clean
             )
+
+    @action(detail=True, methods=['get'], url_path='history_room_volumes')
+    def history_room_volumes(self, request, pk=None):
+        """
+        Возвращает историю изменений объемов работ для конкретной комнаты.
+        Этот метод вызывается при GET-запросе к адресу /rooms/{room_id}/history_room_volumes/
+        """
+        room = self.get_object()  # Получаем объект комнаты по ID из URL
+
+        # Извлекаем все связанные объемы работ для комнаты
+        floor_volumes = FloorWorkVolume.objects.filter(room=room)
+        wall_volumes = WallWorkVolume.objects.filter(room=room)
+        ceiling_volumes = CeilingWorkVolume.objects.filter(room=room)
+
+        # Сериализуем данные
+        floor_serializer = FloorWorkVolumeReadSerializer(floor_volumes, many=True)
+        wall_serializer = WallWorkVolumeReadSerializer(wall_volumes, many=True)
+        ceiling_serializer = CeilingWorkVolumeReadSerializer(ceiling_volumes, many=True)
+
+        # Объединяем сериализованные данные в один ответ
+        history_data = {
+            'floor_volumes': floor_serializer.data,
+            'wall_volumes': wall_serializer.data,
+            'ceiling_volumes': ceiling_serializer.data,
+        }
+
+        return Response(history_data, status=status.HTTP_200_OK)
+
 
 
 class FloorTypeViewSet(ReadOnlyModelViewSet):

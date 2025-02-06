@@ -27,6 +27,8 @@ class FloorTypeReadSerializer(serializers.ModelSerializer):
 class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения данных о работах по полам"""
     floor_type = FloorTypeReadSerializer()
+    remaining_clean = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_rough = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
 
     class Meta:
         model = FloorWorkVolume
@@ -62,6 +64,8 @@ class WallTypeReadSerializer(serializers.ModelSerializer):
 class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения данных о работах по стенам"""
     wall_type = WallTypeReadSerializer()
+    remaining_clean = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_rough = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
 
     class Meta:
         model = WallWorkVolume
@@ -96,6 +100,8 @@ class CeilingTypeReadSerializer(serializers.ModelSerializer):
 class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения данных о работах по потолкам"""
     ceiling_type = CeilingTypeReadSerializer()
+    remaining_clean = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_rough = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
 
     class Meta:
         model = CeilingWorkVolume

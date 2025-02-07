@@ -16,6 +16,7 @@ from .serializers import (
 
 class RoomViewSet(ModelViewSet):
     queryset = Room.objects.all()
+    http_method_names = ['get', 'post', 'patch']
 
     def get_serializer_class(self):
         """
@@ -43,6 +44,7 @@ class RoomViewSet(ModelViewSet):
         Этот метод вызывается при GET-запросе к адресу /rooms/{room_id}/last-room-volumes/
         """
         room = self.get_object()  # Получаем объект комнаты по ID из URL
+
 
         # Получаем последние записи для пола, стен и потолков, отсортированные по времени
         last_floor_volume = FloorWorkVolume.objects.filter(room=room).order_by('-datetime').first()

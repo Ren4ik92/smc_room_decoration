@@ -53,7 +53,7 @@ class RoomViewSet(ModelViewSet):
             )
         return Room.objects.none()
 
-    @action(detail=True, methods=['get'], url_path='last-room-volumes')
+    #@action(detail=True, methods=['get'], url_path='last-room-volumes')
     def last_room_volumes(self, request, pk=None):
         """
         Возвращает последние записи объемов работ для конкретной комнаты (полы, стены, потолки).
@@ -285,21 +285,17 @@ class RoomViewSet(ModelViewSet):
         """
         room = self.get_object()  # Получаем объект комнаты по ID из URL
 
-        # Извлекаем все связанные объемы работ для комнаты
+        if room.project.organization != request.user.profile.organization:
+            return Response({"error": "Доступ запрещен"}, status=status.HTTP_403_FORBIDDEN)
+
         floor_volumes = FloorWorkVolume.objects.filter(room=room)
         wall_volumes = WallWorkVolume.objects.filter(room=room)
         ceiling_volumes = CeilingWorkVolume.objects.filter(room=room)
 
-        # Сериализуем данные
-        floor_serializer = FloorWorkVolumeReadSerializer(floor_volumes, many=True)
-        wall_serializer = WallWorkVolumeReadSerializer(wall_volumes, many=True)
-        ceiling_serializer = CeilingWorkVolumeReadSerializer(ceiling_volumes, many=True)
-
-        # Объединяем сериализованные данные в один ответ
         history_data = {
-            'floor_volumes': floor_serializer.data,
-            'wall_volumes': wall_serializer.data,
-            'ceiling_volumes': floor_serializer.data,
+            'floor_volumes': FloorWorkVolumeReadSerializer(floor_volumes, many=True).data,
+            'wall_volumes': WallWorkVolumeReadSerializer(wall_volumes, many=True).data,
+            'ceiling_volumes': CeilingWorkVolumeReadSerializer(ceiling_volumes, many=True).data,
         }
 
         return Response(history_data, status=status.HTTP_200_OK)
@@ -308,6 +304,7 @@ class RoomViewSet(ModelViewSet):
 
 class FloorTypeViewSet(ReadOnlyModelViewSet):
     #queryset = FloorType.objects.all()
+    permission_classes = [IsAuthenticated]
     serializer_class = FloorTypeReadSerializer
 
     def get_queryset(self):
@@ -319,6 +316,7 @@ class FloorTypeViewSet(ReadOnlyModelViewSet):
 
 class WallTypeViewSet(ReadOnlyModelViewSet):
     #queryset = WallType.objects.all()
+    permission_classes = [IsAuthenticated]
     serializer_class = WallTypeReadSerializer
 
     def get_queryset(self):
@@ -330,6 +328,7 @@ class WallTypeViewSet(ReadOnlyModelViewSet):
 
 class CeilingTypeViewSet(ReadOnlyModelViewSet):
     #queryset = CeilingType.objects.all()
+    permission_classes = [IsAuthenticated]
     serializer_class = CeilingTypeReadSerializer
 
     def get_queryset(self):

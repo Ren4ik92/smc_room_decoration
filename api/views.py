@@ -1,4 +1,5 @@
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -16,6 +17,7 @@ from .serializers import (
 
 class RoomViewSet(ModelViewSet):
     queryset = Room.objects.all()
+    permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post', 'patch']
 
     def get_serializer_class(self):
@@ -26,16 +28,30 @@ class RoomViewSet(ModelViewSet):
             return RoomReadSerializer
         return RoomWriteSerializer
 
+    # def get_queryset(self):
+    #     """
+    #     Обновляем запрос, чтобы предварительно загрузить связанные объемы для пола, стен и потолков
+    #     """
+    #     queryset = super().get_queryset()
+    #     return queryset.prefetch_related(
+    #         'floorworkvolume_volumes',
+    #         'wallworkvolume_volumes',
+    #         'ceilingworkvolume_volumes'
+    #     )
     def get_queryset(self):
         """
-        Обновляем запрос, чтобы предварительно загрузить связанные объемы для пола, стен и потолков
+        Ограничиваем комнаты только для организации текущего пользователя
         """
-        queryset = super().get_queryset()
-        return queryset.prefetch_related(
-            'floorworkvolume_volumes',
-            'wallworkvolume_volumes',
-            'ceilingworkvolume_volumes'
-        )
+        user = self.request.user
+        if hasattr(user, "profile") and user.profile.organization:
+            return Room.objects.filter(
+                project__organization=user.profile.organization  # Доступ через проект
+            ).prefetch_related(
+                'floorworkvolume_volumes',
+                'wallworkvolume_volumes',
+                'ceilingworkvolume_volumes'
+            )
+        return Room.objects.none()
 
     @action(detail=True, methods=['get'], url_path='last-room-volumes')
     def last_room_volumes(self, request, pk=None):
@@ -291,15 +307,33 @@ class RoomViewSet(ModelViewSet):
 
 
 class FloorTypeViewSet(ReadOnlyModelViewSet):
-    queryset = FloorType.objects.all()
+    #queryset = FloorType.objects.all()
     serializer_class = FloorTypeReadSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, "profile") and user.profile.organization:
+            return FloorType.objects.filter(organization=user.profile.organization)
+        return FloorType.objects.none()
 
 
 class WallTypeViewSet(ReadOnlyModelViewSet):
-    queryset = WallType.objects.all()
+    #queryset = WallType.objects.all()
     serializer_class = WallTypeReadSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, "profile") and user.profile.organization:
+            return FloorType.objects.filter(organization=user.profile.organization)
+        return FloorType.objects.none()
 
 
 class CeilingTypeViewSet(ReadOnlyModelViewSet):
-    queryset = CeilingType.objects.all()
+    #queryset = CeilingType.objects.all()
     serializer_class = CeilingTypeReadSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, "profile") and user.profile.organization:
+            return FloorType.objects.filter(organization=user.profile.organization)
+        return FloorType.objects.none()

@@ -6,7 +6,8 @@ diff-match-patch==20230430
 Django==5.0.6
 django-import-export==4.0.3
 djangorestframework==3.15.1
-drf-spectacular==0.28.0
+djangorestframework-simplejwt
+drf-spectacular
 idna==3.10
 inflection==0.5.1
 jsonschema==4.23.0

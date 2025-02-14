@@ -2,12 +2,17 @@ from django.contrib import admin
 from django.forms import ModelForm
 from django import forms
 from import_export.admin import ImportExportModelAdmin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth import get_user_model
 from .models import (
     Room, FloorType, FloorWorkVolume,
     WallType, WallWorkVolume,
-    CeilingType, CeilingWorkVolume, Organization, Project, RoomFloorType, RoomWallType, RoomCeilingType
+    CeilingType, CeilingWorkVolume, Organization, Project, RoomFloorType, RoomWallType, RoomCeilingType, UserProfile
 )
 from import_export import resources, fields, widgets
+
+
+User = get_user_model()
 
 
 # Resource для импорта/экспорта комнат
@@ -150,3 +155,26 @@ class OrganizationAdmin(admin.ModelAdmin):
 @admin.register(Project)
 class Project(admin.ModelAdmin):
     list_display = ('name', 'organization')
+
+
+# Инлайн для UserProfile (чтобы редактировать организацию в профиле юзера)
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = "Дополнительная информация"
+
+
+# Кастомный UserAdmin
+class CustomUserAdmin(UserAdmin):
+    inlines = (UserProfileInline,)  # Добавляем инлайн
+    list_display = UserAdmin.list_display + ('get_organization',)  # Добавляем организацию в список
+    list_filter = UserAdmin.list_filter + ('profile__organization',)  # Фильтр по организации
+
+    # Метод для получения организации
+    def get_organization(self, obj):
+        return obj.profile.organization if hasattr(obj, "profile") and obj.profile.organization else "Без организации"
+    get_organization.short_description = "Организация"
+
+# Перерегистрируем User с новым админом
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)

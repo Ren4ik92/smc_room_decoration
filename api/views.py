@@ -274,7 +274,8 @@ class RoomViewSet(ModelViewSet):
                 note=volume_data.get('note', None),
                 date_added=volume_data.get('date_added', None),
                 remaining_rough=remaining_rough,
-                remaining_clean=remaining_clean
+                remaining_clean=remaining_clean,
+                created_by = self.request.user  # сохраняем пользователя
             )
 
     @action(detail=True, methods=['get'], url_path='history_room_volumes')

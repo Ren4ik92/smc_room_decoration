@@ -158,6 +158,13 @@ class WorkVolume(models.Model):
     rough_completion_percentage = models.FloatField('Процент выполнения черновой отделки', default=0)  # В процентах
     clean_completion_percentage = models.FloatField('Процент выполнения чистовой отделки', default=0)  # В процентах
     unit = models.CharField('Ед. изм.', max_length=10, default='м²')
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Пользователь, внесший данные"
+    )
 
     @property
     def rough_completed_volume(self):

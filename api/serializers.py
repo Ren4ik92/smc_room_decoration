@@ -27,14 +27,15 @@ class FloorTypeReadSerializer(serializers.ModelSerializer):
 class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения данных о работах по полам"""
     floor_type = FloorTypeReadSerializer()
-    remaining_clean = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
-    remaining_rough = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_clean = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_rough = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    created_by = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = FloorWorkVolume
         fields = ['id', 'floor_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
                   'clean_completion_percentage',
-                  'note', 'datetime', 'date_added', 'remaining_clean', 'remaining_rough']
+                  'note', 'datetime', 'date_added', 'remaining_clean', 'remaining_rough', 'created_by']
 
     @staticmethod
     def filter_and_sort_floor_volumes(volumes):
@@ -64,13 +65,15 @@ class WallTypeReadSerializer(serializers.ModelSerializer):
 class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения данных о работах по стенам"""
     wall_type = WallTypeReadSerializer()
-    remaining_clean = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
-    remaining_rough = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_clean = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_rough = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    created_by = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = WallWorkVolume
         fields = ['id', 'wall_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
-                  'clean_completion_percentage', 'note', 'datetime', 'date_added', 'remaining_clean', 'remaining_rough']
+                  'clean_completion_percentage', 'note', 'datetime', 'date_added', 'remaining_clean', 'remaining_rough',
+                  'created_by']
 
     @staticmethod
     def filter_and_sort_wall_volumes(volumes):
@@ -100,14 +103,15 @@ class CeilingTypeReadSerializer(serializers.ModelSerializer):
 class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения данных о работах по потолкам"""
     ceiling_type = CeilingTypeReadSerializer()
-    remaining_clean = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
-    remaining_rough = serializers.DecimalField(max_value=999999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_clean = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_rough = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    created_by = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = CeilingWorkVolume
         fields = ['id', 'ceiling_type', 'rough_volume', 'clean_volume',
                   'rough_completion_percentage', 'clean_completion_percentage', 'note', 'datetime', 'date_added',
-                  'remaining_clean', 'remaining_rough']
+                  'remaining_clean', 'remaining_rough', 'created_by']
 
     @staticmethod
     def filter_and_sort_ceiling_volumes(volumes):

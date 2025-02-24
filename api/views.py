@@ -1,3 +1,5 @@
+from http.client import responses
+
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
@@ -5,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from main.models import Room, FloorWorkVolume, WallWorkVolume, CeilingWorkVolume, FloorType, WallType, CeilingType
+from django.http import HttpResponse
 from .serializers import (
     RoomReadSerializer,
     RoomWriteSerializer,
@@ -13,6 +16,7 @@ from .serializers import (
     CeilingWorkVolumeWriteSerializer, FloorTypeReadSerializer, WallTypeReadSerializer, CeilingTypeReadSerializer,
     FloorWorkVolumeReadSerializer, WallWorkVolumeReadSerializer, CeilingWorkVolumeReadSerializer,
 )
+import csv
 
 
 class RoomViewSet(ModelViewSet):
@@ -301,6 +305,94 @@ class RoomViewSet(ModelViewSet):
 
         return Response(history_data, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['get'], url_path='download-csv')
+    def download_csv(self, request):
+        """
+        Возвращает CSV файл со всеми комнатами и их работами, доступными пользователю,
+        отсортированный по дате добавления записи (от старой к новой).
+        """
+        queryset = self.get_queryset().select_related('project__organization').prefetch_related(
+            'floorworkvolume_volumes', 'floorworkvolume_volumes__floor_type', 'floorworkvolume_volumes__created_by',
+            'wallworkvolume_volumes', 'wallworkvolume_volumes__wall_type', 'wallworkvolume_volumes__created_by',
+            'ceilingworkvolume_volumes', 'ceilingworkvolume_volumes__ceiling_type',
+            'ceilingworkvolume_volumes__created_by'
+        )
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="rooms_volumes.csv"'
+
+        fieldnames = [
+            'Room Name', 'Room Code', 'Constructive Element', 'Layer (Rough/Clean)',
+            'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
+            'Remaining Volume (m²)', 'Project', 'Organization', 'User'
+        ]
+
+        writer = csv.DictWriter(response, fieldnames=fieldnames)
+        writer.writeheader()
+
+        csv_data = []  # Список для хранения данных CSV
+
+        def safe_getattr(obj, attr, default=""):
+            try:
+                return getattr(obj, attr, default) if obj else default
+            except AttributeError:
+                return default
+
+        def write_work_row(room, element_type, layer, type_code, material, date, volume, completion, remaining, user):
+            date_str = date.strftime('%Y-%m-%d %H:%M:%S') if date else "N/A"
+            project = room.project
+            organization = project.organization if project else None
+
+            csv_data.append({
+                'Room Name': safe_getattr(room, 'name'),
+                'Room Code': safe_getattr(room, 'code'),
+                'Constructive Element': element_type,
+                'Layer (Rough/Clean)': layer,
+                'Finish Type Code': type_code,
+                'Material': material,
+                'Date': date_str,
+                'Work Volume (m²)': volume,
+                'Completion (%)': completion,
+                'Remaining Volume (m²)': remaining,
+                'Project': safe_getattr(project, 'name'),
+                'Organization': safe_getattr(organization, 'name'),
+                'User': safe_getattr(user, 'username')
+            })
+
+        def write_work_data(room, element_type, work_volumes, type_attr):
+            for work in work_volumes:
+                type_obj = getattr(work, type_attr, None)
+                finish_type_code = safe_getattr(type_obj, "type_code")
+                user = work.created_by  # Получаем пользователя, который внёс данные
+                for layer, volume_attr, completion_attr, remaining_attr, finish_attr in [
+                    ("Rough", "rough_volume", "rough_completion_percentage", "remaining_rough", "rough_finish"),
+                    ("Clean", "clean_volume", "clean_completion_percentage", "remaining_clean", "clean_finish")
+                ]:
+                    write_work_row(
+                        room,
+                        element_type,
+                        layer,
+                        finish_type_code,
+                        safe_getattr(type_obj, finish_attr),
+                        work.datetime,
+                        getattr(work, volume_attr, 0),
+                        getattr(work, completion_attr, 0),
+                        getattr(work, remaining_attr, 0),
+                        user
+                    )
+
+        for room in queryset:
+            write_work_data(room, "Floor", room.floorworkvolume_volumes.all(), "floor_type")
+            write_work_data(room, "Wall", room.wallworkvolume_volumes.all(), "wall_type")
+            write_work_data(room, "Ceiling", room.ceilingworkvolume_volumes.all(), "ceiling_type")
+
+        # Сортируем csv_data по дате
+        csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
+
+        # Записываем отсортированные данные в CSV
+        writer.writerows(csv_data)
+
+        return response
 
 
 class FloorTypeViewSet(ReadOnlyModelViewSet):

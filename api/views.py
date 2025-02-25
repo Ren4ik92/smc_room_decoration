@@ -1,5 +1,5 @@
 from http.client import responses
-
+import json
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
@@ -21,7 +21,7 @@ import csv
 
 class RoomViewSet(ModelViewSet):
     queryset = Room.objects.all()
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post', 'patch']
 
     def get_serializer_class(self):
@@ -392,6 +392,107 @@ class RoomViewSet(ModelViewSet):
         # Записываем отсортированные данные в CSV
         writer.writerows(csv_data)
 
+        return response
+
+    @action(detail=True, methods=['get'], url_path='download-last-volumes-csv')
+    def download_last_volumes_csv(self, request, pk=None):
+        """
+        Возвращает CSV-файл с последними записями объемов работ для конкретной комнаты.
+        Данные получаются через RoomReadSerializer (в котором реализована фильтрация последних записей),
+        а затем разбиваются по колонкам аналогично download_csv.
+        """
+        room = self.get_object()
+        serializer = RoomReadSerializer(room)
+        room_data = serializer.data
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="room_last_volumes.csv"'
+
+        fieldnames = [
+            'Room Name', 'Room Code', 'Constructive Element', 'Layer (Rough/Clean)',
+            'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
+            'Remaining Volume (m²)', 'Project', 'Organization', 'User'
+        ]
+        writer = csv.DictWriter(response, fieldnames=fieldnames)
+        writer.writeheader()
+
+        csv_data = []
+
+        def write_work_row(room_data, element_type, layer, type_code, material, date_str, volume, completion, remaining,
+                           user):
+            project = room_data.get("project", {})
+            organization = room_data.get("organization", {})
+            csv_data.append({
+                'Room Name': room_data.get("name", ""),
+                'Room Code': room_data.get("code", ""),
+                'Constructive Element': element_type,
+                'Layer (Rough/Clean)': layer,
+                'Finish Type Code': type_code,
+                'Material': material,
+                'Date': date_str,
+                'Work Volume (m²)': volume,
+                'Completion (%)': completion,
+                'Remaining Volume (m²)': remaining,
+                'Project': project.get("name", ""),
+                'Organization': organization.get("name", ""),
+                'User': user,
+            })
+
+        def write_work_data(volumes, element_type, type_field):
+            """
+            Для каждого элемента (например, floor_volumes) обходим записи,
+            и для каждой создаем по две строки – для слоя "Rough" и "Clean".
+            type_field – ключ, по которому находится информация о типе (например, 'floor_type').
+            """
+            for volume in volumes:
+                type_obj = volume.get(type_field, {})
+                finish_type_code = type_obj.get("type_code", "")
+                # Получаем название отделки для каждого слоя из объекта типа
+                material_rough = type_obj.get("rough_finish", "")
+                material_clean = type_obj.get("clean_finish", "")
+                # Дата записи (предполагается, что она уже в строковом виде, иначе можно форматировать)
+                date_str = volume.get("datetime", "N/A")
+                # Создаем строку для слоя "Rough"
+                write_work_row(
+                    room_data,
+                    element_type,
+                    "Rough",
+                    finish_type_code,
+                    material_rough,
+                    date_str,
+                    volume.get("rough_volume", 0),
+                    volume.get("rough_completion_percentage", 0),
+                    volume.get("remaining_rough", 0),
+                    volume.get("created_by", "")
+                )
+                # Создаем строку для слоя "Clean"
+                write_work_row(
+                    room_data,
+                    element_type,
+                    "Clean",
+                    finish_type_code,
+                    material_clean,
+                    date_str,
+                    volume.get("clean_volume", 0),
+                    volume.get("clean_completion_percentage", 0),
+                    volume.get("remaining_clean", 0),
+                    volume.get("created_by", "")
+                )
+
+        # Обрабатываем записи для каждого конструктивного элемента
+        floor_volumes = room_data.get("floor_volumes", [])
+        write_work_data(floor_volumes, "Floor", "floor_type")
+
+        wall_volumes = room_data.get("wall_volumes", [])
+        write_work_data(wall_volumes, "Wall", "wall_type")
+
+        ceiling_volumes = room_data.get("ceiling_volumes", [])
+        write_work_data(ceiling_volumes, "Ceiling", "ceiling_type")
+
+        # Сортировка по дате (если дата отсутствует, считается "0000-00-00 00:00:00")
+        csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
+
+        writer.writerows(csv_data)
         return response
 
 

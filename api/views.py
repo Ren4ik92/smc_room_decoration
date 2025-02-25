@@ -21,7 +21,7 @@ import csv
 
 class RoomViewSet(ModelViewSet):
     queryset = Room.objects.all()
-    #permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post', 'patch']
 
     def get_serializer_class(self):
@@ -394,19 +394,24 @@ class RoomViewSet(ModelViewSet):
 
         return response
 
-    @action(detail=True, methods=['get'], url_path='download-last-volumes-csv')
+    @action(detail=False, methods=['get'], url_path='download-last-volumes-csv')
     def download_last_volumes_csv(self, request, pk=None):
         """
-        Возвращает CSV-файл с последними записями объемов работ для конкретной комнаты.
-        Данные получаются через RoomReadSerializer (в котором реализована фильтрация последних записей),
-        а затем разбиваются по колонкам аналогично download_csv.
+        Возвращает CSV-файл для всех комнат, где для каждой комнаты выводятся только последние
+        записи работ (пол, стены, потолки) с разбивкой на колонки:
+          - Room Name, Room Code, Constructive Element, Layer (Rough/Clean),
+          - Finish Type Code, Material, Date, Work Volume (m²), Completion (%),
+          - Remaining Volume (m²), Project, Organization, User.
+        Данные получаются через RoomReadSerializer, где реализована фильтрация последних записей.
         """
-        room = self.get_object()
-        serializer = RoomReadSerializer(room)
-        room_data = serializer.data
+        # Получаем данные по всем комнатам через сериализатор
+        queryset = self.get_queryset()
+        serializer = RoomReadSerializer(queryset, many=True)
+        rooms_data = serializer.data
 
+        # Инициализируем HttpResponse для CSV
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-        response['Content-Disposition'] = 'attachment; filename="room_last_volumes.csv"'
+        response['Content-Disposition'] = 'attachment; filename="rooms_last_volumes.csv"'
 
         fieldnames = [
             'Room Name', 'Room Code', 'Constructive Element', 'Layer (Rough/Clean)',
@@ -438,21 +443,20 @@ class RoomViewSet(ModelViewSet):
                 'User': user,
             })
 
-        def write_work_data(volumes, element_type, type_field):
+        def write_work_data(room_data, volumes, element_type, type_field):
             """
-            Для каждого элемента (например, floor_volumes) обходим записи,
-            и для каждой создаем по две строки – для слоя "Rough" и "Clean".
-            type_field – ключ, по которому находится информация о типе (например, 'floor_type').
+            Для каждого типа работ (например, floor_volumes) обходим записи,
+            создавая две строки — для слоя "Rough" и для слоя "Clean".
             """
             for volume in volumes:
                 type_obj = volume.get(type_field, {})
                 finish_type_code = type_obj.get("type_code", "")
-                # Получаем название отделки для каждого слоя из объекта типа
+                # Из объекта типа получаем информацию о материале (отделке) для каждого слоя
                 material_rough = type_obj.get("rough_finish", "")
                 material_clean = type_obj.get("clean_finish", "")
-                # Дата записи (предполагается, что она уже в строковом виде, иначе можно форматировать)
+                # Предполагаем, что поле "datetime" уже сериализовано в строку
                 date_str = volume.get("datetime", "N/A")
-                # Создаем строку для слоя "Rough"
+                # Строка для слоя "Rough"
                 write_work_row(
                     room_data,
                     element_type,
@@ -465,7 +469,7 @@ class RoomViewSet(ModelViewSet):
                     volume.get("remaining_rough", 0),
                     volume.get("created_by", "")
                 )
-                # Создаем строку для слоя "Clean"
+                # Строка для слоя "Clean"
                 write_work_row(
                     room_data,
                     element_type,
@@ -479,17 +483,18 @@ class RoomViewSet(ModelViewSet):
                     volume.get("created_by", "")
                 )
 
-        # Обрабатываем записи для каждого конструктивного элемента
-        floor_volumes = room_data.get("floor_volumes", [])
-        write_work_data(floor_volumes, "Floor", "floor_type")
+        # Обходим все комнаты и для каждой обрабатываем записи по каждому конструктивному элементу
+        for room_data in rooms_data:
+            floor_volumes = room_data.get("floor_volumes", [])
+            write_work_data(room_data, floor_volumes, "Floor", "floor_type")
 
-        wall_volumes = room_data.get("wall_volumes", [])
-        write_work_data(wall_volumes, "Wall", "wall_type")
+            wall_volumes = room_data.get("wall_volumes", [])
+            write_work_data(room_data, wall_volumes, "Wall", "wall_type")
 
-        ceiling_volumes = room_data.get("ceiling_volumes", [])
-        write_work_data(ceiling_volumes, "Ceiling", "ceiling_type")
+            ceiling_volumes = room_data.get("ceiling_volumes", [])
+            write_work_data(room_data, ceiling_volumes, "Ceiling", "ceiling_type")
 
-        # Сортировка по дате (если дата отсутствует, считается "0000-00-00 00:00:00")
+        # Сортируем строки по дате (если дата отсутствует, ставим минимальное значение)
         csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
 
         writer.writerows(csv_data)

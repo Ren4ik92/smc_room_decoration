@@ -99,7 +99,7 @@ class Room(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, default=None, verbose_name='Проект')
     code = models.CharField('Код', max_length=50, unique=True, blank=False)
     block = models.CharField('Здание', max_length=50, blank=True)
-    floor = models.IntegerField('Этаж', blank=False, default=0)
+    floor = models.IntegerField('Этаж', blank=True, default=0)
     room_number = models.CharField('Номер помещения', max_length=50, blank=True)
     name = models.CharField('Наименование', max_length=255, blank=False)
     area_floor = models.FloatField('Площадь пола', default=1)

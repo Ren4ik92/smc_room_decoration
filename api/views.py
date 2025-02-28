@@ -503,33 +503,10 @@ class RoomViewSet(ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='download-all-volumes-csv')
     def download_all_volumes_csv(self, request):
-        # rooms = self.queryset.all()  # Получаем все комнаты
-        #
-        #
-        # # Создаем список для хранения данных о каждой комнате
-        # rooms_data = []
-        #
-        # for room in rooms:
-        #     # Получаем типы отделки для текущей комнаты
-        #     planned_floor_types = RoomFloorTypeReadSerializer(room.floor_types.all(), many=True).data
-        #     planned_wall_types = RoomWallTypeReadSerializer(room.wall_types.all(), many=True).data
-        #     planned_ceiling_types = RoomCeilingTypeReadSerializer(room.ceiling_types.all(), many=True).data
-        #
-        #     # Формируем словарь с данными для каждой комнаты
-        #     room_data = {
-        #         'room_id': room.id,
-        #         'room_name': room.name,  # Пример, что имя комнаты может быть в модели
-        #         'planned_floor_types': planned_floor_types,
-        #         'planned_wall_types': planned_wall_types,
-        #         'planned_ceiling_types': planned_ceiling_types,
-        #     }
-        #     rooms_data.append(room_data)  # Добавляем данные о комнате в общий список
-        #
-        # return Response(rooms_data, status=status.HTTP_200_OK)
         """
-                Возвращает CSV-файл со всеми комнатами, включая последние работы.
-                Если у комнаты нет работ, данные заполняются нулями.
-                """
+        Возвращает CSV-файл со всеми комнатами, включая последние работы.
+        Если у комнаты нет работ, используются планируемые типы отделки из сериализатора.
+        """
         queryset = self.get_queryset()
         serializer = RoomReadSerializer(queryset, many=True)
         rooms_data = serializer.data
@@ -567,11 +544,28 @@ class RoomViewSet(ModelViewSet):
                 'User': user,
             })
 
-        def write_work_data(room_data, volumes, element_type, type_field):
+        def write_work_data(room_data, volumes, element_type, type_field, planned_types_field):
+            type_key = f"{element_type.lower()}_type"  # 'floor_type', 'wall_type', 'ceiling_type'
+
             if not volumes:
-                # Если данных по работам нет, заполняем нулями
-                for layer in ["Rough", "Clean"]:
-                    write_work_row(room_data, element_type, layer, "", "", "N/A", 0, 0, 0, "")
+                # Если данных по работам нет, используем планируемые типы
+                planned_types = room_data.get(planned_types_field, [])
+                if planned_types and len(planned_types) > 0:
+                    # Берем первый планируемый тип
+                    planned_type = planned_types[0]
+                    # Извлекаем данные из вложенного словаря
+                    type_data = planned_type.get(type_key, {})
+                    finish_type_code = type_data.get("type_code", "")
+                    material_rough = type_data.get("rough_finish", "")
+                    material_clean = type_data.get("clean_finish", "")
+
+                    write_work_row(room_data, element_type, "Rough", finish_type_code, material_rough, "N/A", 0, 0, 0,
+                                   "")
+                    write_work_row(room_data, element_type, "Clean", finish_type_code, material_clean, "N/A", 0, 0, 0,
+                                   "")
+                else:
+                    for layer in ["Rough", "Clean"]:
+                        write_work_row(room_data, element_type, layer, "", "", "N/A", 0, 0, 0, "")
             else:
                 for volume in volumes:
                     type_obj = volume.get(type_field, {})
@@ -592,9 +586,10 @@ class RoomViewSet(ModelViewSet):
                     )
 
         for room_data in rooms_data:
-            write_work_data(room_data, room_data.get("floor_volumes", []), "Floor", "floor_type")
-            write_work_data(room_data, room_data.get("wall_volumes", []), "Wall", "wall_type")
-            write_work_data(room_data, room_data.get("ceiling_volumes", []), "Ceiling", "ceiling_type")
+            write_work_data(room_data, room_data.get("floor_volumes", []), "Floor", "floor_type", "planning_type_floor")
+            write_work_data(room_data, room_data.get("wall_volumes", []), "Wall", "wall_type", "planning_type_wall")
+            write_work_data(room_data, room_data.get("ceiling_volumes", []), "Ceiling", "ceiling_type",
+                            "planning_type_ceiling")
 
         csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
         writer.writerows(csv_data)

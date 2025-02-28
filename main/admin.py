@@ -20,17 +20,15 @@ class RoomResource(resources.ModelResource):
     project = fields.Field(
         column_name='project',
         attribute='project',
-        widget=widgets.ForeignKeyWidget(Project, 'name')  # Указываем, что используем поле `name` модели Project
+        widget=widgets.ForeignKeyWidget(Project, 'name')
     )
 
     class Meta:
         model = Room
         fields = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling',
-                  'project', 'planned_wall_types', 'planned_floor_types', 'planned_ceiling_types')
-        export_order = (
-            'id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling', 'project',
-            'planned_wall_types', 'planned_floor_types', 'planned_ceiling_types')
-
+                  'project')
+        export_order = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling',
+                  'project')
 
 # Resource для импорта/экспорта типов отделки
 class FloorTypeResource(resources.ModelResource):

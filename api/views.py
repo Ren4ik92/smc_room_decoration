@@ -15,6 +15,7 @@ from .serializers import (
     WallWorkVolumeWriteSerializer,
     CeilingWorkVolumeWriteSerializer, FloorTypeReadSerializer, WallTypeReadSerializer, CeilingTypeReadSerializer,
     FloorWorkVolumeReadSerializer, WallWorkVolumeReadSerializer, CeilingWorkVolumeReadSerializer,
+    RoomFloorTypeReadSerializer, RoomWallTypeReadSerializer, RoomCeilingTypeReadSerializer,
 )
 import csv
 
@@ -497,6 +498,105 @@ class RoomViewSet(ModelViewSet):
         # Сортируем строки по дате (если дата отсутствует, ставим минимальное значение)
         csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
 
+        writer.writerows(csv_data)
+        return response
+
+    @action(detail=False, methods=['get'], url_path='download-all-volumes-csv')
+    def download_all_volumes_csv(self, request):
+        # rooms = self.queryset.all()  # Получаем все комнаты
+        #
+        #
+        # # Создаем список для хранения данных о каждой комнате
+        # rooms_data = []
+        #
+        # for room in rooms:
+        #     # Получаем типы отделки для текущей комнаты
+        #     planned_floor_types = RoomFloorTypeReadSerializer(room.floor_types.all(), many=True).data
+        #     planned_wall_types = RoomWallTypeReadSerializer(room.wall_types.all(), many=True).data
+        #     planned_ceiling_types = RoomCeilingTypeReadSerializer(room.ceiling_types.all(), many=True).data
+        #
+        #     # Формируем словарь с данными для каждой комнаты
+        #     room_data = {
+        #         'room_id': room.id,
+        #         'room_name': room.name,  # Пример, что имя комнаты может быть в модели
+        #         'planned_floor_types': planned_floor_types,
+        #         'planned_wall_types': planned_wall_types,
+        #         'planned_ceiling_types': planned_ceiling_types,
+        #     }
+        #     rooms_data.append(room_data)  # Добавляем данные о комнате в общий список
+        #
+        # return Response(rooms_data, status=status.HTTP_200_OK)
+        """
+                Возвращает CSV-файл со всеми комнатами, включая последние работы.
+                Если у комнаты нет работ, данные заполняются нулями.
+                """
+        queryset = self.get_queryset()
+        serializer = RoomReadSerializer(queryset, many=True)
+        rooms_data = serializer.data
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="rooms_all_last_volumes.csv"'
+
+        fieldnames = [
+            'Room Name', 'Room Code', 'Constructive Element', 'Layer (Rough/Clean)',
+            'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
+            'Remaining Volume (m²)', 'Project', 'Organization', 'User'
+        ]
+        writer = csv.DictWriter(response, fieldnames=fieldnames)
+        writer.writeheader()
+
+        csv_data = []
+
+        def write_work_row(room_data, element_type, layer, type_code, material, date_str, volume, completion, remaining,
+                           user):
+            project = room_data.get("project", {})
+            organization = room_data.get("organization", {})
+            csv_data.append({
+                'Room Name': room_data.get("name", ""),
+                'Room Code': room_data.get("code", ""),
+                'Constructive Element': element_type,
+                'Layer (Rough/Clean)': layer,
+                'Finish Type Code': type_code,
+                'Material': material,
+                'Date': date_str,
+                'Work Volume (m²)': volume,
+                'Completion (%)': completion,
+                'Remaining Volume (m²)': remaining,
+                'Project': project.get("name", ""),
+                'Organization': organization.get("name", ""),
+                'User': user,
+            })
+
+        def write_work_data(room_data, volumes, element_type, type_field):
+            if not volumes:
+                # Если данных по работам нет, заполняем нулями
+                for layer in ["Rough", "Clean"]:
+                    write_work_row(room_data, element_type, layer, "", "", "N/A", 0, 0, 0, "")
+            else:
+                for volume in volumes:
+                    type_obj = volume.get(type_field, {})
+                    finish_type_code = type_obj.get("type_code", "")
+                    material_rough = type_obj.get("rough_finish", "")
+                    material_clean = type_obj.get("clean_finish", "")
+                    date_str = volume.get("datetime", "N/A")
+
+                    write_work_row(
+                        room_data, element_type, "Rough", finish_type_code, material_rough, date_str,
+                        volume.get("rough_volume", 0), volume.get("rough_completion_percentage", 0),
+                        volume.get("remaining_rough", 0), volume.get("created_by", "")
+                    )
+                    write_work_row(
+                        room_data, element_type, "Clean", finish_type_code, material_clean, date_str,
+                        volume.get("clean_volume", 0), volume.get("clean_completion_percentage", 0),
+                        volume.get("remaining_clean", 0), volume.get("created_by", "")
+                    )
+
+        for room_data in rooms_data:
+            write_work_data(room_data, room_data.get("floor_volumes", []), "Floor", "floor_type")
+            write_work_data(room_data, room_data.get("wall_volumes", []), "Wall", "wall_type")
+            write_work_data(room_data, room_data.get("ceiling_volumes", []), "Ceiling", "ceiling_type")
+
+        csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
         writer.writerows(csv_data)
         return response
 

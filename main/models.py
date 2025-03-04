@@ -102,9 +102,9 @@ class Room(models.Model):
     floor = models.IntegerField('Этаж', blank=True, default=0)
     room_number = models.CharField('Номер помещения', max_length=50, blank=True)
     name = models.CharField('Наименование', max_length=255, blank=False)
-    area_floor = models.FloatField('Площадь пола', default=1)
-    area_wall = models.FloatField('Площадь стен', default=1)
-    area_ceiling = models.FloatField('Площадь потолка', default=1)
+    # area_floor = models.FloatField('Площадь пола', default=1)
+    # area_wall = models.FloatField('Площадь стен', default=1)
+    # area_ceiling = models.FloatField('Площадь потолка', default=1)
 
     def organization(self):
         return self.project.organization if self.project else None

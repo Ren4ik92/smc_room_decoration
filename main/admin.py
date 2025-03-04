@@ -25,10 +25,8 @@ class RoomResource(resources.ModelResource):
 
     class Meta:
         model = Room
-        fields = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling',
-                  'project')
-        export_order = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'area_floor', 'area_wall', 'area_ceiling',
-                  'project')
+        fields = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'project')
+        export_order = ('id', 'code', 'block', 'floor', 'room_number', 'name', 'project')
 
 # Resource для импорта/экспорта типов отделки
 class FloorTypeResource(resources.ModelResource):
@@ -91,7 +89,7 @@ class CeilingWorkVolumeInline(admin.TabularInline):
 @admin.register(Room)
 class RoomAdmin(ImportExportModelAdmin):
     resource_class = RoomResource
-    list_display = ('name', 'code', 'block', 'floor', 'area_floor', 'area_wall', 'area_ceiling')
+    list_display = ('name', 'code', 'block', 'floor')
     search_fields = ('code', 'name', 'block', 'room_number')
     list_filter = ('block', 'floor')
     inlines = [RoomFloorTypeInline, RoomWallTypeInline, RoomCeilingTypeInline,

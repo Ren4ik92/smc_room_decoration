@@ -107,15 +107,15 @@ class RoomViewSet(ModelViewSet):
         if not room.floor_types.exists() and not room.wall_types.exists() and not room.ceiling_types.exists():
             raise ValidationError("Невозможно добавить объемы: у комнаты отсутствуют планируемые типы отделки.")
 
-        # Проверка площади
-        if room.area_floor == 0 and room.area_wall == 0 and room.area_ceiling == 0:
-            raise ValidationError("Невозможно добавить объемы: все площади комнаты равны нулю.")
-        if room.area_floor == 0:
-            raise ValidationError("Невозможно добавить объемы: площадь пола равна нулю.")
-        if room.area_wall == 0:
-            raise ValidationError("Невозможно добавить объемы: площадь стен равна нулю.")
-        if room.area_ceiling == 0:
-            raise ValidationError("Невозможно добавить объемы: площадь потолка равна нулю.")
+        # # Проверка площади
+        # if room.area_floor == 0 and room.area_wall == 0 and room.area_ceiling == 0:
+        #     raise ValidationError("Невозможно добавить объемы: все площади комнаты равны нулю.")
+        # if room.area_floor == 0:
+        #     raise ValidationError("Невозможно добавить объемы: площадь пола равна нулю.")
+        # if room.area_wall == 0:
+        #     raise ValidationError("Невозможно добавить объемы: площадь стен равна нулю.")
+        # if room.area_ceiling == 0:
+        #     raise ValidationError("Невозможно добавить объемы: площадь потолка равна нулю.")
 
         # Получаем данные из запроса
         floor_data_list = request.data.get('floor_volumes', [])

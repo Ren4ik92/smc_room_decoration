@@ -328,7 +328,7 @@ class RoomViewSet(ModelViewSet):
             'Remaining Volume (m²)', 'Project', 'Organization', 'User'
         ]
 
-        writer = csv.DictWriter(response, fieldnames=fieldnames)
+        writer = csv.DictWriter(response, fieldnames=fieldnames, delimiter=';')
         writer.writeheader()
 
         csv_data = []  # Список для хранения данных CSV
@@ -419,7 +419,7 @@ class RoomViewSet(ModelViewSet):
             'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
             'Remaining Volume (m²)', 'Project', 'Organization', 'User'
         ]
-        writer = csv.DictWriter(response, fieldnames=fieldnames)
+        writer = csv.DictWriter(response, fieldnames=fieldnames, delimiter=';')
         writer.writeheader()
 
         csv_data = []
@@ -519,7 +519,7 @@ class RoomViewSet(ModelViewSet):
             'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
             'Remaining Volume (m²)', 'Project', 'Organization', 'User'
         ]
-        writer = csv.DictWriter(response, fieldnames=fieldnames)
+        writer = csv.DictWriter(response, fieldnames=fieldnames, delimiter=';')
         writer.writeheader()
 
         csv_data = []

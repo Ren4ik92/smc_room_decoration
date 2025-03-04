@@ -53,8 +53,8 @@ class FloorType(models.Model):
     """Модель типы отделки полов"""
     type_code = models.CharField('Код', max_length=50, unique=True)
     description = models.TextField('Описание')
-    rough_finish = models.CharField('Черновая отделка', max_length=255)  # черновая отделка
-    clean_finish = models.CharField('Чистовая отделка', max_length=255)
+    rough_finish = models.CharField('Черновая отделка', max_length=255, blank=True)  # черновая отделка
+    clean_finish = models.CharField('Чистовая отделка', max_length=255, blank=True)
 
     def __str__(self):
         return self.type_code
@@ -68,8 +68,8 @@ class WallType(models.Model):
     """Модель Типы отделки стен"""
     type_code = models.CharField(max_length=50, unique=True)
     description = models.TextField()
-    rough_finish = models.CharField('Черновая отделка', max_length=255)
-    clean_finish = models.CharField('Чистовая отделка', max_length=255)
+    rough_finish = models.CharField('Черновая отделка', max_length=255, blank=True)
+    clean_finish = models.CharField('Чистовая отделка', max_length=255, blank=True)
 
     def __str__(self):
         return self.type_code
@@ -83,8 +83,8 @@ class CeilingType(models.Model):
     """Модель Типы отделки потолков"""
     type_code = models.CharField('Код', max_length=50, unique=True)
     description = models.TextField('Описание')
-    rough_finish = models.CharField('Черновая отделка', max_length=255)
-    clean_finish = models.CharField('Чистовая отделка', max_length=255)
+    rough_finish = models.CharField('Черновая отделка', max_length=255, blank=True)
+    clean_finish = models.CharField('Чистовая отделка', max_length=255, blank=True)
 
     def __str__(self):
         return self.type_code

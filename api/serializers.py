@@ -30,6 +30,8 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
     remaining_clean = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
     remaining_rough = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
     created_by = serializers.StringRelatedField(read_only=True)
+    datetime = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
+    date_added = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
 
     class Meta:
         model = FloorWorkVolume
@@ -68,6 +70,8 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
     remaining_clean = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
     remaining_rough = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
     created_by = serializers.StringRelatedField(read_only=True)
+    datetime = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
+    date_added = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
 
     class Meta:
         model = WallWorkVolume
@@ -106,6 +110,8 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
     remaining_clean = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
     remaining_rough = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
     created_by = serializers.StringRelatedField(read_only=True)
+    datetime = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
+    date_added = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
 
     class Meta:
         model = CeilingWorkVolume

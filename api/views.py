@@ -283,7 +283,7 @@ class RoomViewSet(ModelViewSet):
                 created_by = self.request.user  # сохраняем пользователя
             )
 
-    @action(detail=True, methods=['get'], url_path='history_room_volumes')
+    #@action(detail=True, methods=['get'], url_path='history_room_volumes')
     def history_room_volumes(self, request, pk=None):
         """
         Возвращает историю изменений объемов работ для конкретной комнаты.

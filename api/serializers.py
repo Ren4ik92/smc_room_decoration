@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from datetime import datetime
 from main.models import Room, FloorWorkVolume, WallWorkVolume, CeilingWorkVolume, FloorType, WallType, CeilingType, \
     Organization, Project, RoomFloorType, RoomWallType, RoomCeilingType
 
@@ -27,26 +28,34 @@ class FloorTypeReadSerializer(serializers.ModelSerializer):
 class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения данных о работах по полам"""
     floor_type = FloorTypeReadSerializer()
-    remaining_clean = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
-    remaining_rough = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_clean = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
+    remaining_rough = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
     created_by = serializers.StringRelatedField(read_only=True)
-    datetime = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
-    date_added = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
+    datetime = serializers.DateTimeField(read_only=True)
+    date_added = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = FloorWorkVolume
         fields = ['id', 'floor_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
-                  'clean_completion_percentage',
-                  'note', 'datetime', 'date_added', 'remaining_clean', 'remaining_rough', 'created_by']
+                  'clean_completion_percentage', 'note', 'datetime', 'date_added', 'remaining_clean',
+                  'remaining_rough', 'created_by']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['datetime'] = instance.datetime.strftime("%d.%m.%Y %H:%M")
+        data['date_added'] = instance.date_added.strftime("%d.%m.%Y %H:%M")
+        return data
 
     @staticmethod
     def filter_and_sort_floor_volumes(volumes):
-        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
+        for volume in volumes:
+            if isinstance(volume['datetime'], str):
+                volume['datetime'] = datetime.strptime(volume['datetime'], "%d.%m.%Y %H:%M")
+
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_floor_types = set()
 
-        # Добавляем только последний объем для каждого типа floor_type
         for volume in sorted_volumes:
             floor_type_id = volume['floor_type']['id']
             if floor_type_id not in seen_floor_types:
@@ -67,26 +76,34 @@ class WallTypeReadSerializer(serializers.ModelSerializer):
 class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения данных о работах по стенам"""
     wall_type = WallTypeReadSerializer()
-    remaining_clean = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
-    remaining_rough = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_clean = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
+    remaining_rough = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
     created_by = serializers.StringRelatedField(read_only=True)
-    datetime = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
-    date_added = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
+    datetime = serializers.DateTimeField(read_only=True)
+    date_added = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = WallWorkVolume
         fields = ['id', 'wall_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
-                  'clean_completion_percentage', 'note', 'datetime', 'date_added', 'remaining_clean', 'remaining_rough',
-                  'created_by']
+                  'clean_completion_percentage', 'note', 'datetime', 'date_added', 'remaining_clean',
+                  'remaining_rough', 'created_by']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['datetime'] = instance.datetime.strftime("%d.%m.%Y %H:%M")
+        data['date_added'] = instance.date_added.strftime("%d.%m.%Y %H:%M")
+        return data
 
     @staticmethod
     def filter_and_sort_wall_volumes(volumes):
-        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
+        for volume in volumes:
+            if isinstance(volume['datetime'], str):
+                volume['datetime'] = datetime.strptime(volume['datetime'], "%d.%m.%Y %H:%M")
+
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_wall_types = set()
 
-        # Добавляем только последний объем для каждого типа wall_type
         for volume in sorted_volumes:
             wall_type_id = volume['wall_type']['id']
             if wall_type_id not in seen_wall_types:
@@ -107,11 +124,11 @@ class CeilingTypeReadSerializer(serializers.ModelSerializer):
 class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения данных о работах по потолкам"""
     ceiling_type = CeilingTypeReadSerializer()
-    remaining_clean = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
-    remaining_rough = serializers.DecimalField(max_value=999, min_value=0, max_digits=10, decimal_places=1, read_only=True)
+    remaining_clean = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
+    remaining_rough = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
     created_by = serializers.StringRelatedField(read_only=True)
-    datetime = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
-    date_added = serializers.DateTimeField(format="%d.%m.%Y %H:%M", read_only=True)
+    datetime = serializers.DateTimeField(read_only=True)
+    date_added = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = CeilingWorkVolume
@@ -119,14 +136,22 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
                   'rough_completion_percentage', 'clean_completion_percentage', 'note', 'datetime', 'date_added',
                   'remaining_clean', 'remaining_rough', 'created_by']
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['datetime'] = instance.datetime.strftime("%d.%m.%Y %H:%M")
+        data['date_added'] = instance.date_added.strftime("%d.%m.%Y %H:%M")
+        return data
+
     @staticmethod
     def filter_and_sort_ceiling_volumes(volumes):
-        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
+        for volume in volumes:
+            if isinstance(volume['datetime'], str):
+                volume['datetime'] = datetime.strptime(volume['datetime'], "%d.%m.%Y %H:%M")
+
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_ceiling_types = set()
 
-        # Добавляем только последний объем для каждого типа ceiling_type
         for volume in sorted_volumes:
             ceiling_type_id = volume['ceiling_type']['id']
             if ceiling_type_id not in seen_ceiling_types:

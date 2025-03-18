@@ -269,21 +269,21 @@ class RoomViewSet(ModelViewSet):
             remaining_rough = planned_rough_volume - rough_volume
             remaining_clean = planned_clean_volume - clean_volume
 
-            # Проверяем, является ли пользователь редактором
-            user = self.request.user
-            is_editor = user.groups.filter(name="Editor").exists() or user.is_superuser
-
-            # Если пользователь не Editor, проверяем, уменьшает ли он значения
-            if not is_editor and last_volume:
-                if (rough_volume is not None and rough_volume < last_volume.rough_volume) or \
-                        (clean_volume is not None and clean_volume < last_volume.clean_volume) or \
-                        (
-                                rough_completion_percentage is not None and rough_completion_percentage < last_volume.rough_completion_percentage) or \
-                        (
-                                clean_completion_percentage is not None and clean_completion_percentage < last_volume.clean_completion_percentage):
-                    raise ValidationError(
-                        "Вы можете только увеличивать объемы или процент завершения. Уменьшение недоступно без прав Editor."
-                    )
+            # # Проверяем, является ли пользователь редактором
+            # user = self.request.user
+            # is_editor = user.groups.filter(name="Editor").exists() or user.is_superuser
+            #
+            # # Если пользователь не Editor, проверяем, уменьшает ли он значения
+            # if not is_editor and last_volume:
+            #     if (rough_volume is not None and rough_volume < last_volume.rough_volume) or \
+            #             (clean_volume is not None and clean_volume < last_volume.clean_volume) or \
+            #             (
+            #                     rough_completion_percentage is not None and rough_completion_percentage < last_volume.rough_completion_percentage) or \
+            #             (
+            #                     clean_completion_percentage is not None and clean_completion_percentage < last_volume.clean_completion_percentage):
+            #         raise ValidationError(
+            #             "Вы можете только увеличивать объемы или процент завершения. Уменьшение недоступно без прав Editor."
+            #         )
 
             model.objects.create(
                 room=room,

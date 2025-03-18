@@ -42,8 +42,8 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['datetime'] = instance.datetime.strftime("%d.%m.%Y %H:%M")
-        data['date_added'] = instance.date_added.strftime("%d.%m.%Y %H:%M")
+        data['datetime'] = instance.datetime.strftime("%d.%m.%Y %H:%M") if instance.date_added else None #
+        data['date_added'] = instance.date_added.strftime("%d.%m.%Y %H:%M") if instance.date_added else None
         return data
 
     @staticmethod
@@ -90,8 +90,8 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['datetime'] = instance.datetime.strftime("%d.%m.%Y %H:%M")
-        data['date_added'] = instance.date_added.strftime("%d.%m.%Y %H:%M")
+        data['datetime'] = instance.datetime.strftime("%d.%m.%Y %H:%M") if instance.date_added else None
+        data['date_added'] = instance.date_added.strftime("%d.%m.%Y %H:%M") if instance.date_added else None
         return data
 
     @staticmethod
@@ -138,8 +138,8 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['datetime'] = instance.datetime.strftime("%d.%m.%Y %H:%M")
-        data['date_added'] = instance.date_added.strftime("%d.%m.%Y %H:%M")
+        data['datetime'] = instance.datetime.strftime("%d.%m.%Y %H:%M") if instance.date_added else None
+        data['date_added'] = instance.date_added.strftime("%d.%m.%Y %H:%M") if instance.date_added else None
         return data
 
     @staticmethod

@@ -42,14 +42,12 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def filter_and_sort_floor_volumes(volumes):
-        for volume in volumes:
-            if isinstance(volume['datetime'], str):
-                volume['datetime'] = datetime.strptime(volume['datetime'], "%d.%m.%Y %H:%M")
-
+        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_floor_types = set()
 
+        # Добавляем только последний объем для каждого типа floor_type
         for volume in sorted_volumes:
             floor_type_id = volume['floor_type']['id']
             if floor_type_id not in seen_floor_types:
@@ -84,14 +82,12 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def filter_and_sort_wall_volumes(volumes):
-        for volume in volumes:
-            if isinstance(volume['datetime'], str):
-                volume['datetime'] = datetime.strptime(volume['datetime'], "%d.%m.%Y %H:%M")
-
+        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_wall_types = set()
 
+        # Добавляем только последний объем для каждого типа wall_type
         for volume in sorted_volumes:
             wall_type_id = volume['wall_type']['id']
             if wall_type_id not in seen_wall_types:
@@ -126,14 +122,12 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def filter_and_sort_ceiling_volumes(volumes):
-        for volume in volumes:
-            if isinstance(volume['datetime'], str):
-                volume['datetime'] = datetime.strptime(volume['datetime'], "%d.%m.%Y %H:%M")
-
+        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_ceiling_types = set()
 
+        # Добавляем только последний объем для каждого типа ceiling_type
         for volume in sorted_volumes:
             ceiling_type_id = volume['ceiling_type']['id']
             if ceiling_type_id not in seen_ceiling_types:

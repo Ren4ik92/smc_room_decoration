@@ -1,7 +1,9 @@
 from rest_framework import serializers
-from datetime import datetime
-from main.models import Room, FloorWorkVolume, WallWorkVolume, CeilingWorkVolume, FloorType, WallType, CeilingType, \
-    Organization, Project, RoomFloorType, RoomWallType, RoomCeilingType
+from main.models import (
+    Room, FloorWorkVolume, WallWorkVolume, CeilingWorkVolume,
+    FloorType, WallType, CeilingType, Organization, Project,
+    RoomFloorType, RoomWallType, RoomCeilingType
+)
 
 
 # Сериализаторы для чтения (GET)
@@ -18,36 +20,34 @@ class ProjectReadSerializer(serializers.ModelSerializer):
 
 
 class FloorTypeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для чтения данных о типах полов"""
-
     class Meta:
         model = FloorType
-        fields = ['id', 'type_code', 'description', 'rough_finish', 'clean_finish']
+        fields = ['id', 'type_code', 'description', 'finish', 'layer']
 
 
 class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для чтения данных о работах по полам"""
     floor_type = FloorTypeReadSerializer()
-    remaining_clean = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
-    remaining_rough = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
+    volume = serializers.DecimalField(max_digits=10, decimal_places=1)
+    completion_percentage = serializers.DecimalField(max_digits=5, decimal_places=2)
+    remaining_finish = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
+    remaining_percentage = serializers.SerializerMethodField()  # Новое поле для остатка в процентах
     created_by = serializers.StringRelatedField(read_only=True)
-    #datetime = serializers.DateTimeField(read_only=True)
-    #date_added = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = FloorWorkVolume
-        fields = ['id', 'floor_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
-                  'clean_completion_percentage', 'note', 'datetime', 'date_added', 'remaining_clean',
-                  'remaining_rough', 'created_by']
+        fields = ['id', 'floor_type', 'volume', 'completion_percentage', 'remaining_finish', 'remaining_percentage',
+                  'note', 'datetime', 'date_added', 'created_by']
+
+    def get_remaining_percentage(self, obj):
+        """Вычисляем остаток в процентах как 100 - completion_percentage"""
+        return round(100 - obj.completion_percentage, 2)
 
     @staticmethod
     def filter_and_sort_floor_volumes(volumes):
-        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_floor_types = set()
 
-        # Добавляем только последний объем для каждого типа floor_type
         for volume in sorted_volumes:
             floor_type_id = volume['floor_type']['id']
             if floor_type_id not in seen_floor_types:
@@ -58,36 +58,34 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
 
 
 class WallTypeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для чтения данных о типах стен"""
-
     class Meta:
         model = WallType
-        fields = ['id', 'type_code', 'description', 'rough_finish', 'clean_finish']
+        fields = ['id', 'type_code', 'description', 'finish', 'layer']
 
 
 class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для чтения данных о работах по стенам"""
     wall_type = WallTypeReadSerializer()
-    remaining_clean = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
-    remaining_rough = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
+    volume = serializers.DecimalField(max_digits=10, decimal_places=1)
+    completion_percentage = serializers.DecimalField(max_digits=5, decimal_places=2)
+    remaining_finish = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
+    remaining_percentage = serializers.SerializerMethodField()  # Новое поле для остатка в процентах
     created_by = serializers.StringRelatedField(read_only=True)
-    #datetime = serializers.DateTimeField(read_only=True)
-    #date_added = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = WallWorkVolume
-        fields = ['id', 'wall_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
-                  'clean_completion_percentage', 'note', 'datetime', 'date_added', 'remaining_clean',
-                  'remaining_rough', 'created_by']
+        fields = ['id', 'wall_type', 'volume', 'completion_percentage', 'remaining_finish', 'remaining_percentage',
+                  'note', 'datetime', 'date_added', 'created_by']
+
+    def get_remaining_percentage(self, obj):
+        """Вычисляем остаток в процентах как 100 - completion_percentage"""
+        return round(100 - obj.completion_percentage, 2)
 
     @staticmethod
     def filter_and_sort_wall_volumes(volumes):
-        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_wall_types = set()
 
-        # Добавляем только последний объем для каждого типа wall_type
         for volume in sorted_volumes:
             wall_type_id = volume['wall_type']['id']
             if wall_type_id not in seen_wall_types:
@@ -98,36 +96,34 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
 
 
 class CeilingTypeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для чтения данных о типах потолков"""
-
     class Meta:
         model = CeilingType
-        fields = ['id', 'type_code', 'description', 'rough_finish', 'clean_finish']
+        fields = ['id', 'type_code', 'description', 'finish', 'layer']
 
 
 class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для чтения данных о работах по потолкам"""
     ceiling_type = CeilingTypeReadSerializer()
-    remaining_clean = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
-    remaining_rough = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
+    volume = serializers.DecimalField(max_digits=10, decimal_places=1)
+    completion_percentage = serializers.DecimalField(max_digits=5, decimal_places=2)
+    remaining_finish = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
+    remaining_percentage = serializers.SerializerMethodField()  # Новое поле для остатка в процентах
     created_by = serializers.StringRelatedField(read_only=True)
-    #datetime = serializers.DateTimeField(read_only=True)
-    #date_added = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = CeilingWorkVolume
-        fields = ['id', 'ceiling_type', 'rough_volume', 'clean_volume',
-                  'rough_completion_percentage', 'clean_completion_percentage', 'note', 'datetime', 'date_added',
-                  'remaining_clean', 'remaining_rough', 'created_by']
+        fields = ['id', 'ceiling_type', 'volume', 'completion_percentage', 'remaining_finish', 'remaining_percentage',
+                  'note', 'datetime', 'date_added', 'created_by']
+
+    def get_remaining_percentage(self, obj):
+        """Вычисляем остаток в процентах как 100 - completion_percentage"""
+        return round(100 - obj.completion_percentage, 2)
 
     @staticmethod
     def filter_and_sort_ceiling_volumes(volumes):
-        # Сортируем по дате (datetime) и фильтруем, оставляем последний для каждого типа
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_ceiling_types = set()
 
-        # Добавляем только последний объем для каждого типа ceiling_type
         for volume in sorted_volumes:
             ceiling_type_id = volume['ceiling_type']['id']
             if ceiling_type_id not in seen_ceiling_types:
@@ -138,100 +134,110 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
 
 
 class RoomFloorTypeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для чтения данных о типах отделки пола для конкретной комнаты с указанием площади"""
     floor_type = FloorTypeReadSerializer()
 
     class Meta:
         model = RoomFloorType
-        fields = ['floor_type', 'area_rough', 'area_clean']  # Площади для черновой и чистовой отделки
+        fields = ['floor_type', 'area_finish']
 
 
 class RoomWallTypeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для чтения данных о типах отделки стен для конкретной комнаты с указанием площади"""
     wall_type = WallTypeReadSerializer()
 
     class Meta:
         model = RoomWallType
-        fields = ['wall_type', 'area_rough', 'area_clean']  # Площади для черновой и чистовой отделки
+        fields = ['wall_type', 'area_finish']
 
 
 class RoomCeilingTypeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для чтения данных о типах отделки потолков для конкретной комнаты с указанием площади"""
-    ceiling_type = CeilingTypeReadSerializer()  # Исправлено имя поля
+    ceiling_type = CeilingTypeReadSerializer()
 
     class Meta:
         model = RoomCeilingType
-        fields = ['ceiling_type', 'area_rough', 'area_clean']  # Поле `ceiling_type` добавлено корректно
-
+        fields = ['ceiling_type', 'area_finish']
 
 
 class RoomReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для чтения данных о комнатах"""
     floor_volumes = FloorWorkVolumeReadSerializer(many=True, source='floorworkvolume_volumes')
     wall_volumes = WallWorkVolumeReadSerializer(many=True, source='wallworkvolume_volumes')
     ceiling_volumes = CeilingWorkVolumeReadSerializer(many=True, source='ceilingworkvolume_volumes')
     planning_type_floor = RoomFloorTypeReadSerializer(many=True, source='floor_types')
     planning_type_wall = RoomWallTypeReadSerializer(many=True, source='wall_types')
     planning_type_ceiling = RoomCeilingTypeReadSerializer(many=True, source='ceiling_types')
-    organization = OrganizationReadSerializer()
+    organization = OrganizationReadSerializer(source='project.organization')
     project = ProjectReadSerializer()
 
     class Meta:
         model = Room
         fields = [
-            'organization', 'project', 'id', 'name', 'code', 'block', 'floor', 'room_number', 'name',
-            'floor_volumes', 'wall_volumes', 'ceiling_volumes', 'planning_type_floor', 'planning_type_wall',
-            'planning_type_ceiling'
+            'organization', 'project', 'id', 'code', 'block', 'floor', 'room_number', 'name',
+            'floor_volumes', 'wall_volumes', 'ceiling_volumes', 'planning_type_floor',
+            'planning_type_wall', 'planning_type_ceiling'
         ]
 
     def to_representation(self, instance):
-        """Переопределяем метод для фильтрации объемов по последним добавленным данным"""
         representation = super().to_representation(instance)
-
-        # Применяем фильтрацию для стен
-        representation['wall_volumes'] = WallWorkVolumeReadSerializer.filter_and_sort_wall_volumes(
-            representation['wall_volumes'])
-
-        # Применяем фильтрацию для полов
         representation['floor_volumes'] = FloorWorkVolumeReadSerializer.filter_and_sort_floor_volumes(
             representation['floor_volumes'])
-
-        # Применяем фильтрацию для потолков
+        representation['wall_volumes'] = WallWorkVolumeReadSerializer.filter_and_sort_wall_volumes(
+            representation['wall_volumes'])
         representation['ceiling_volumes'] = CeilingWorkVolumeReadSerializer.filter_and_sort_ceiling_volumes(
             representation['ceiling_volumes'])
-
         return representation
 
 
-# Сериализаторы для записи (POST)
 class FloorWorkVolumeWriteSerializer(serializers.ModelSerializer):
     floor_type = serializers.PrimaryKeyRelatedField(queryset=FloorType.objects.all())
     note = serializers.CharField(required=False, allow_blank=True)
+    volume = serializers.DecimalField(max_digits=10, decimal_places=1, required=False)
+    completion_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
 
     class Meta:
         model = FloorWorkVolume
-        fields = ['floor_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
-                  'clean_completion_percentage', 'note', 'date_added']
+        fields = ['floor_type', 'volume', 'completion_percentage', 'note', 'date_added']
+
+    def validate(self, data):
+        if 'volume' not in data and 'completion_percentage' not in data:
+            raise serializers.ValidationError("Необходимо указать либо volume, либо completion_percentage.")
+        if 'volume' in data and 'completion_percentage' in data:
+            raise serializers.ValidationError("Нельзя указывать одновременно volume и completion_percentage.")
+        return data
 
 
 class WallWorkVolumeWriteSerializer(serializers.ModelSerializer):
     wall_type = serializers.PrimaryKeyRelatedField(queryset=WallType.objects.all())
     note = serializers.CharField(required=False, allow_blank=True)
+    volume = serializers.DecimalField(max_digits=10, decimal_places=1, required=False)
+    completion_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
 
     class Meta:
         model = WallWorkVolume
-        fields = ['wall_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
-                  'clean_completion_percentage', 'note', 'date_added']
+        fields = ['wall_type', 'volume', 'completion_percentage', 'note', 'date_added']
+
+    def validate(self, data):
+        if 'volume' not in data and 'completion_percentage' not in data:
+            raise serializers.ValidationError("Необходимо указать либо volume, либо completion_percentage.")
+        if 'volume' in data and 'completion_percentage' in data:
+            raise serializers.ValidationError("Нельзя указывать одновременно volume и completion_percentage.")
+        return data
 
 
 class CeilingWorkVolumeWriteSerializer(serializers.ModelSerializer):
     ceiling_type = serializers.PrimaryKeyRelatedField(queryset=CeilingType.objects.all())
     note = serializers.CharField(required=False, allow_blank=True)
+    volume = serializers.DecimalField(max_digits=10, decimal_places=1, required=False)
+    completion_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
 
     class Meta:
         model = CeilingWorkVolume
-        fields = ['ceiling_type', 'rough_volume', 'clean_volume', 'rough_completion_percentage',
-                  'clean_completion_percentage', 'note', 'date_added']
+        fields = ['ceiling_type', 'volume', 'completion_percentage', 'note', 'date_added']
+
+    def validate(self, data):
+        if 'volume' not in data and 'completion_percentage' not in data:
+            raise serializers.ValidationError("Необходимо указать либо volume, либо completion_percentage.")
+        if 'volume' in data and 'completion_percentage' in data:
+            raise serializers.ValidationError("Нельзя указывать одновременно volume и completion_percentage.")
+        return data
 
 
 class RoomWriteSerializer(serializers.ModelSerializer):
@@ -241,33 +247,23 @@ class RoomWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Room
-        fields = ['floor_volumes', 'wall_volumes', 'ceiling_volumes']
+        fields = [
+            'project', 'code', 'block', 'floor', 'room_number', 'name',
+            'floor_volumes', 'wall_volumes', 'ceiling_volumes'
+        ]
 
     def create(self, validated_data):
-        """
-        Создание новой комнаты с добавлением связанных объемов работ.
-        """
-        room = self.context['room']  # Получаем объект комнаты из контекста
-        # room_area = room.area  # Получаем площадь комнаты
+        floor_volumes_data = validated_data.pop('floorworkvolume_volumes', [])
+        wall_volumes_data = validated_data.pop('wallworkvolume_volumes', [])
+        ceiling_volumes_data = validated_data.pop('ceilingworkvolume_volumes', [])
 
-        # Создаем объект комнаты
         room = Room.objects.create(**validated_data)
 
-        # Создаем связанные объемы с передачей площади через контекст
-        # floor_volumes_data = validated_data.pop('floorworkvolume_volumes', [])
-        # wall_volumes_data = validated_data.pop('wallworkvolume_volumes', [])
-        # ceiling_volumes_data = validated_data.pop('ceilingworkvolume_volumes', [])
-
-        # Передаем контекст с площадью для всех связанных объемов
-        # self._create_related_volumes(FloorWorkVolume, room, floor_volumes_data, room_area)
-        # self._create_related_volumes(WallWorkVolume, room, wall_volumes_data, room_area)
-        # self._create_related_volumes(CeilingWorkVolume, room, ceiling_volumes_data, room_area)
+        for volume_data in floor_volumes_data:
+            FloorWorkVolume.objects.create(room=room, **volume_data)
+        for volume_data in wall_volumes_data:
+            WallWorkVolume.objects.create(room=room, **volume_data)
+        for volume_data in ceiling_volumes_data:
+            CeilingWorkVolume.objects.create(room=room, **volume_data)
 
         return room
-
-    def _create_related_volumes(self, model, room, volumes_data, room_area):
-        """
-        Создание связанных объектов объемов работ для комнаты.
-        """
-        for volume_data in volumes_data:
-            model.objects.create(room=room, **volume_data)

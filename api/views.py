@@ -26,69 +26,37 @@ class RoomViewSet(ModelViewSet):
     http_method_names = ['get', 'post', 'patch']
 
     def get_serializer_class(self):
-        """
-        Возвращаем подходящий сериализатор в зависимости от действия
-        """
         if self.action in ['list', 'retrieve']:
             return RoomReadSerializer
         return RoomWriteSerializer
 
-    # def get_queryset(self):
-    #     """
-    #     Обновляем запрос, чтобы предварительно загрузить связанные объемы для пола, стен и потолков
-    #     """
-    #     queryset = super().get_queryset()
-    #     return queryset.prefetch_related(
-    #         'floorworkvolume_volumes',
-    #         'wallworkvolume_volumes',
-    #         'ceilingworkvolume_volumes'
-    #     )
     def get_queryset(self):
-        """
-        Ограничиваем комнаты только для организации текущего пользователя
-        """
         user = self.request.user
         if hasattr(user, "profile") and user.profile.organization:
             return Room.objects.filter(
-                project__organization=user.profile.organization  # Доступ через проект
+                project__organization=user.profile.organization
             ).prefetch_related(
                 'floorworkvolume_volumes',
                 'wallworkvolume_volumes',
-                'ceilingworkvolume_volumes'
+                'ceilingworkvolume_volumes',
+                'floor_types',
+                'wall_types',
+                'ceiling_types'
             )
         return Room.objects.none()
 
-    #@action(detail=True, methods=['get'], url_path='last-room-volumes')
+    @action(detail=True, methods=['get'], url_path='last-room-volumes')
     def last_room_volumes(self, request, pk=None):
-        """
-        Возвращает последние записи объемов работ для конкретной комнаты (полы, стены, потолки).
-        Этот метод вызывается при GET-запросе к адресу /rooms/{room_id}/last-room-volumes/
-        """
-        room = self.get_object()  # Получаем объект комнаты по ID из URL
+        room = self.get_object()
 
-
-        # Получаем последние записи для пола, стен и потолков, отсортированные по времени
         last_floor_volume = FloorWorkVolume.objects.filter(room=room).order_by('-datetime').first()
         last_wall_volume = WallWorkVolume.objects.filter(room=room).order_by('-datetime').first()
         last_ceiling_volume = CeilingWorkVolume.objects.filter(room=room).order_by('-datetime').first()
 
-        # Если записи не найдены, возвращаем None
-        last_floor_volume_data = None
-        if last_floor_volume:
-            floor_serializer = FloorWorkVolumeReadSerializer(last_floor_volume)
-            last_floor_volume_data = floor_serializer.data
+        last_floor_volume_data = FloorWorkVolumeReadSerializer(last_floor_volume).data if last_floor_volume else None
+        last_wall_volume_data = WallWorkVolumeReadSerializer(last_wall_volume).data if last_wall_volume else None
+        last_ceiling_volume_data = CeilingWorkVolumeReadSerializer(last_ceiling_volume).data if last_ceiling_volume else None
 
-        last_wall_volume_data = None
-        if last_wall_volume:
-            wall_serializer = WallWorkVolumeReadSerializer(last_wall_volume)
-            last_wall_volume_data = wall_serializer.data
-
-        last_ceiling_volume_data = None
-        if last_ceiling_volume:
-            ceiling_serializer = CeilingWorkVolumeReadSerializer(last_ceiling_volume)
-            last_ceiling_volume_data = ceiling_serializer.data
-
-        # Формируем ответ с последними объемами
         last_volumes_data = {
             'floor_volume': last_floor_volume_data,
             'wall_volume': last_wall_volume_data,
@@ -99,40 +67,24 @@ class RoomViewSet(ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='add-volumes')
     def add_room_volumes(self, request, pk=None):
-        """
-        Добавление новых объемов для комнаты (пол, стены, потолок).
-        """
         room = self.get_object()
-        # Проверка наличия планируемых типов отделки
+
         if not room.floor_types.exists() and not room.wall_types.exists() and not room.ceiling_types.exists():
             raise ValidationError("Невозможно добавить объемы: у комнаты отсутствуют планируемые типы отделки.")
 
-        # # Проверка площади
-        # if room.area_floor == 0 and room.area_wall == 0 and room.area_ceiling == 0:
-        #     raise ValidationError("Невозможно добавить объемы: все площади комнаты равны нулю.")
-        # if room.area_floor == 0:
-        #     raise ValidationError("Невозможно добавить объемы: площадь пола равна нулю.")
-        # if room.area_wall == 0:
-        #     raise ValidationError("Невозможно добавить объемы: площадь стен равна нулю.")
-        # if room.area_ceiling == 0:
-        #     raise ValidationError("Невозможно добавить объемы: площадь потолка равна нулю.")
-
-        # Получаем данные из запроса
         floor_data_list = request.data.get('floor_volumes', [])
         wall_data_list = request.data.get('wall_volumes', [])
         ceiling_data_list = request.data.get('ceiling_volumes', [])
 
         last_volumes = self._get_last_volumes(room)
 
-        # Обрабатываем данные для каждого типа с учетом соответствующей площади
-        self._process_volumes(room, floor_data_list, FloorWorkVolume, 'area_floor', 'floor_type', last_volumes.get('floor_volume'))
-        self._process_volumes(room, wall_data_list, WallWorkVolume, 'area_wall', 'wall_type', last_volumes.get('wall_volume'))
-        self._process_volumes(room, ceiling_data_list, CeilingWorkVolume, 'area_ceiling', 'ceiling_type', last_volumes.get('ceiling_volume'))
+        self._process_volumes(room, floor_data_list, FloorWorkVolume, 'floor_type', last_volumes.get('floor_volume'))
+        self._process_volumes(room, wall_data_list, WallWorkVolume, 'wall_type', last_volumes.get('wall_volume'))
+        self._process_volumes(room, ceiling_data_list, CeilingWorkVolume, 'ceiling_type', last_volumes.get('ceiling_volume'))
 
         return Response({'status': 'volumes added'}, status=status.HTTP_201_CREATED)
 
     def _get_last_volumes(self, room):
-        # Получаем последние записи для пола, стен и потолков
         last_floor_volume = FloorWorkVolume.objects.filter(room=room).order_by('-datetime').first()
         last_wall_volume = WallWorkVolume.objects.filter(room=room).order_by('-datetime').first()
         last_ceiling_volume = CeilingWorkVolume.objects.filter(room=room).order_by('-datetime').first()
@@ -143,8 +95,7 @@ class RoomViewSet(ModelViewSet):
             'ceiling_volume': last_ceiling_volume,
         }
 
-
-    def _process_volumes(self, room, volumes_data, model, area_field, type_field, last_volume):
+    def _process_volumes(self, room, volumes_data, model, type_field, last_volume):
         type_model_map = {
             'floor_type': FloorType,
             'wall_type': WallType,
@@ -189,114 +140,73 @@ class RoomViewSet(ModelViewSet):
             else:
                 raise ValidationError(f"Неожиданный тип поля: {type_field}")
 
-            planned_rough_volume = planned_type.area_rough
-            planned_clean_volume = planned_type.area_clean
+            planned_finish_volume = planned_type.area_finish
+            volume = volume_data.get('volume')
+            completion_percentage = volume_data.get('completion_percentage')
 
-            rough_volume = volume_data.get('rough_volume')
-            clean_volume = volume_data.get('clean_volume')
-            rough_completion_percentage = volume_data.get('rough_completion_percentage')
-            clean_completion_percentage = volume_data.get('clean_completion_percentage')
-
-            # Validate that you can't provide both volume and completion percentage at the same time
-            if rough_volume is not None and rough_completion_percentage is not None:
+            # Добавляем проверку на одновременную отправку volume и completion_percentage
+            if volume is not None and completion_percentage is not None:
                 raise ValidationError(
-                    "Нельзя одновременно указывать rough_volume и rough_completion_percentage.  Укажите что-то одно."
+                    "Нельзя одновременно указывать volume и completion_percentage. Укажите что-то одно."
                 )
 
-            if clean_volume is not None and clean_completion_percentage is not None:
+            # Преобразуем значения в float, если они переданы
+            if volume is not None:
+                volume = float(volume)
+            if completion_percentage is not None:
+                completion_percentage = float(completion_percentage)
+
+            # Если ничего не указано и это первая запись
+            if last_volume is None and volume is None and completion_percentage is None:
                 raise ValidationError(
-                    "Нельзя одновременно указывать clean_volume и clean_completion_percentage. Укажите что-то одно."
+                    "Для первой записи необходимо указать либо volume, либо completion_percentage."
                 )
-            # Если last_volume нет, и предоставлены данные о черновой отделке
-            if last_volume is None:
-                if rough_volume is not None or rough_completion_percentage is not None:
-                    clean_volume = 0.0
-                    clean_completion_percentage = 0.0
-                elif clean_volume is not None or clean_completion_percentage is not None:
-                    rough_volume = 0.0
-                    rough_completion_percentage = 0.0
-                else:
-                     raise ValidationError(
-                        "Для новой комнаты необходимо указать данные либо о черновой, либо о чистовой отделке."
-                    )
 
-
-            # Check if BOTH rough_volume AND rough_completion_percentage are NOT provided
-            if rough_volume is None and rough_completion_percentage is None:
-                if last_volume:
-                    rough_volume = last_volume.rough_volume
-                    rough_completion_percentage = last_volume.rough_completion_percentage
-
-            # Check if BOTH clean_volume AND clean_completion_percentage are NOT provided
-            if clean_volume is None and clean_completion_percentage is None:
-                if last_volume:
-                    clean_volume = last_volume.clean_volume
-                    clean_completion_percentage = last_volume.clean_completion_percentage
-
+            # Если ничего не указано, берем значения из последней записи
+            if volume is None and completion_percentage is None and last_volume:
+                volume = last_volume.volume
+                completion_percentage = last_volume.completion_percentage
 
             # Проверяем, что хотя бы одно значение передано или было взято из last_volume
-            if rough_volume is None and rough_completion_percentage is None and clean_volume is None and clean_completion_percentage is None:
+            if volume is None and completion_percentage is None:
                 raise ValidationError(
-                    "Необходимо указать хотя бы одно из rough_volume, rough_completion_percentage, clean_volume или clean_completion_percentage."
+                    "Необходимо указать либо volume, либо completion_percentage."
                 )
 
+            # Рассчитываем проценты или объем
+            if volume is not None and completion_percentage is None:
+                completion_percentage = round((volume / planned_finish_volume) * 100, 2) if planned_finish_volume else 0
+            elif completion_percentage is not None and volume is None:
+                volume = round((planned_finish_volume * completion_percentage) / 100, 2)
 
-            # Рассчитываем проценты на основе объема
-            if rough_volume is not None and rough_completion_percentage is None:
-                rough_completion_percentage = round((rough_volume / planned_rough_volume) * 100,
-                                                    2) if planned_rough_volume else 0
-            if clean_volume is not None and clean_completion_percentage is None:
-                clean_completion_percentage = round((clean_volume / planned_clean_volume) * 100,
-                                                    2) if planned_clean_volume else 0
-
-            # Рассчитываем объемы на основе процента завершения, если они переданы
-            if rough_completion_percentage is not None and rough_volume is None:
-                rough_volume = round((planned_rough_volume * rough_completion_percentage) / 100, 2)
-            if clean_completion_percentage is not None and clean_volume is None:
-                clean_volume = round((planned_clean_volume * clean_completion_percentage) / 100, 2)
-
-            if rough_volume > planned_rough_volume:
+            if volume > planned_finish_volume:
                 raise ValidationError(
-                    f"Черновой объем ({rough_volume:.2f} м²) превышает планируемый объем "
-                    f"({planned_rough_volume:.2f} м²) для типа {type_field}."
+                    f"Выполненный объем ({volume:.2f} м²) превышает планируемый объем "
+                    f"({planned_finish_volume:.2f} м²) для типа {type_field}."
                 )
-            if clean_volume > planned_clean_volume:
+            if completion_percentage > 100:
                 raise ValidationError(
-                    f"Чистовой объем ({clean_volume:.2f} м²) превышает планируемый объем "
-                    f"({planned_clean_volume:.2f} м²) для типа {type_field}."
+                    f"Процент завершения ({completion_percentage:.2f}%) не может превышать 100%."
                 )
 
-            remaining_rough = planned_rough_volume - rough_volume
-            remaining_clean = planned_clean_volume - clean_volume
-
-            # Проверяем, является ли пользователь редактором
             user = self.request.user
             is_editor = user.groups.filter(name="Editor").exists() or user.is_superuser
 
-            # Если пользователь не Editor, проверяем, уменьшает ли он значения
             if not is_editor and last_volume:
-                if (rough_volume is not None and rough_volume < last_volume.rough_volume) or \
-                        (clean_volume is not None and clean_volume < last_volume.clean_volume) or \
-                        (
-                                rough_completion_percentage is not None and rough_completion_percentage < last_volume.rough_completion_percentage) or \
-                        (
-                                clean_completion_percentage is not None and clean_completion_percentage < last_volume.clean_completion_percentage):
+                if (volume is not None and volume < last_volume.volume) or \
+                   (completion_percentage is not None and completion_percentage < last_volume.completion_percentage):
                     raise ValidationError(
-                        "Вы можете только увеличивать объемы или процент завершения. Уменьшение недоступно без прав Editor."
+                        "Вы можете только увеличивать объем или процент завершения. Уменьшение недоступно без прав Editor."
                     )
 
             model.objects.create(
                 room=room,
-                **{type_field + '_id': volume_data[type_field]},
-                rough_volume=rough_volume,
-                clean_volume=clean_volume,
-                rough_completion_percentage=rough_completion_percentage,
-                clean_completion_percentage=clean_completion_percentage,
+                **{type_field + '_id': type_id},
+                volume=volume,
+                completion_percentage=completion_percentage,
                 note=volume_data.get('note', None),
                 date_added=volume_data.get('date_added', None),
-                remaining_rough=remaining_rough,
-                remaining_clean=remaining_clean,
-                created_by = self.request.user  # сохраняем пользователя
+                created_by=user
             )
 
     #@action(detail=True, methods=['get'], url_path='history_room_volumes')

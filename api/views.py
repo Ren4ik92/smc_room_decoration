@@ -1,6 +1,7 @@
 from http.client import responses
 import json
 from datetime import datetime
+import pytz
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
@@ -328,9 +329,6 @@ class RoomViewSet(ModelViewSet):
     def download_last_volumes_csv(self, request):
         """
         Возвращает CSV-файл с последними записями объемов работ для всех комнат.
-        Колонки: Room Name, Room Code, Constructive Element, Layer (Rough/Clean),
-        Finish Type Code, Material, Date, Work Volume (m²), Completion (%),
-        Remaining Volume (m²), Project, Organization, User.
         """
         queryset = self.get_queryset()
         serializer = RoomReadSerializer(queryset, many=True)
@@ -348,6 +346,7 @@ class RoomViewSet(ModelViewSet):
         writer.writeheader()
 
         csv_data = []
+        local_tz = pytz.timezone('Europe/Moscow')  # Укажите вашу временную зону
 
         def write_work_row(room_data, element_type, volume_data, type_field):
             if not volume_data:
@@ -359,7 +358,10 @@ class RoomViewSet(ModelViewSet):
             if raw_date != "N/A":
                 try:
                     date_obj = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
-                    formatted_date = date_obj.strftime("%d.%m.%Y %H:%M")
+                    if date_obj.tzinfo is None:
+                        date_obj = pytz.utc.localize(date_obj)
+                    local_date = date_obj.astimezone(local_tz)
+                    formatted_date = local_date.strftime("%d.%m.%Y %H:%M")
                 except ValueError:
                     formatted_date = raw_date
             else:
@@ -402,7 +404,6 @@ class RoomViewSet(ModelViewSet):
         """
         Возвращает CSV-файл со всеми записями объемов работ для всех комнат без фильтрации по последней дате.
         """
-        # Получаем комнаты с предзагруженными связями
         queryset = self.get_queryset()
 
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
@@ -417,11 +418,17 @@ class RoomViewSet(ModelViewSet):
         writer.writeheader()
 
         csv_data = []
+        local_tz = pytz.timezone('Europe/Moscow')  # Укажите вашу временную зону
 
         def write_work_row(room, volume, element_type, type_obj):
-            # Форматируем дату
             raw_date = volume.datetime
-            formatted_date = raw_date.strftime("%d.%m.%Y %H:%M") if raw_date else "N/A"
+            if raw_date:
+                if raw_date.tzinfo is None:  # Если дата naive
+                    raw_date = pytz.utc.localize(raw_date)
+                local_date = raw_date.astimezone(local_tz)
+                formatted_date = local_date.strftime("%d.%m.%Y %H:%M")
+            else:
+                formatted_date = "N/A"
 
             csv_data.append({
                 'Room Name': room.name,
@@ -439,24 +446,18 @@ class RoomViewSet(ModelViewSet):
                 'User': str(volume.created_by) if volume.created_by else "",
             })
 
-        # Обходим все комнаты и собираем все записи объемов
         for room in queryset:
-            # Получаем все записи объемов работ напрямую из моделей
             floor_volumes = FloorWorkVolume.objects.filter(room=room).select_related('floor_type')
             wall_volumes = WallWorkVolume.objects.filter(room=room).select_related('wall_type')
             ceiling_volumes = CeilingWorkVolume.objects.filter(room=room).select_related('ceiling_type')
 
-            # Добавляем все записи для полов
             for volume in floor_volumes:
                 write_work_row(room, volume, "Floor", volume.floor_type)
-            # Добавляем все записи для стен
             for volume in wall_volumes:
                 write_work_row(room, volume, "Wall", volume.wall_type)
-            # Добавляем все записи для потолков
             for volume in ceiling_volumes:
                 write_work_row(room, volume, "Ceiling", volume.ceiling_type)
 
-        # Сортируем по дате (если дата отсутствует, ставим минимальное значение)
         csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
         writer.writerows(csv_data)
         return response

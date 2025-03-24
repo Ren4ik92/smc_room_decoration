@@ -200,7 +200,7 @@ class RoomViewSet(ModelViewSet):
                         (
                                 completion_percentage is not None and completion_percentage < last_volume.completion_percentage):
                     raise ValidationError(
-                        "Вы можете только увеличивать объем или процент завершения. Уменьшение недоступно без прав Editor."
+                        "Вы можете только увеличивать объем или процент завершения. Для уменьшения недостаточно прав."
                     )
 
             model.objects.create(

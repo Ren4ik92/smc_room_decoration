@@ -38,13 +38,13 @@ class Project(models.Model):
 class BaseFinishType(models.Model):
     """Абстрактная базовая модель для типов отделки"""
     CHOICES = (
-        ('rough', 'Черновой'),
-        ('clean', 'Чистовой'),
+        ('Черновой', 'Черновой'),
+        ('Чистовой', 'Чистовой'),
     )
     type_code = models.CharField('Код', max_length=50, unique=True)
     description = models.TextField('Описание')
     finish = models.CharField('Отделка', max_length=255, blank=True)
-    layer = models.CharField('Слой', max_length=20, choices=CHOICES, default='rough')
+    layer = models.CharField('Слой', max_length=20, choices=CHOICES, default='Черновой')
 
     def __str__(self):
         return self.type_code
@@ -54,34 +54,30 @@ class BaseFinishType(models.Model):
 
 
 class FloorType(BaseFinishType):
-    """Модель типы отделки полов"""
     class Meta:
         verbose_name = 'Тип отделки пола'
         verbose_name_plural = 'Типы отделки полов'
 
 
 class WallType(BaseFinishType):
-    """Модель Типы отделки стен"""
     class Meta:
         verbose_name = 'Тип отделки стен'
         verbose_name_plural = 'Типы отделки стен'
 
 
 class CeilingType(BaseFinishType):
-    """Модель Типы отделки потолков"""
     class Meta:
         verbose_name = 'Тип отделки потолка'
         verbose_name_plural = 'Типы отделки потолков'
 
 
 class Room(models.Model):
-    """Модель помещения"""
     project = models.ForeignKey(Project, on_delete=models.CASCADE, verbose_name='Проект')
-    code = models.CharField('Код', max_length=50, unique=True, blank=False)
+    code = models.CharField('Код', max_length=50, unique=True)
     block = models.CharField('Здание', max_length=50, blank=True)
-    floor = models.IntegerField('Этаж', blank=True, default=0)
+    floor = models.IntegerField('Этаж', default=0)
     room_number = models.CharField('Номер помещения', max_length=50, blank=True)
-    name = models.CharField('Наименование', max_length=255, blank=False)
+    name = models.CharField('Наименование', max_length=255)
 
     def organization(self):
         return self.project.organization if self.project else None
@@ -95,14 +91,12 @@ class Room(models.Model):
 
 
 class RoomFloorType(models.Model):
-    """Промежуточная модель для связи комнаты и типа отделки пола"""
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='floor_types')
     floor_type = models.ForeignKey(FloorType, on_delete=models.CASCADE)
     area_finish = models.FloatField('Площадь отделки', default=0)
 
     def __str__(self):
-        layer = 'Черновой' if self.floor_type.layer == 'rough' else 'Чистовой'
-        return f"{self.room} - {self.floor_type} ({layer}: {self.area_finish} м²)"
+        return f"{self.room} - {self.floor_type} ({self.floor_type.layer}: {self.area_finish} м²)"
 
     class Meta:
         verbose_name = 'Отделка пола в помещении'
@@ -110,14 +104,12 @@ class RoomFloorType(models.Model):
 
 
 class RoomWallType(models.Model):
-    """Промежуточная модель для связи комнаты и типа отделки стен"""
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='wall_types')
     wall_type = models.ForeignKey(WallType, on_delete=models.CASCADE)
     area_finish = models.FloatField('Площадь отделки', default=0)
 
     def __str__(self):
-        layer = 'Черновой' if self.wall_type.layer == 'rough' else 'Чистовой'
-        return f"{self.room} - {self.wall_type} ({layer}: {self.area_finish} м²)"
+        return f"{self.room} - {self.wall_type} ({self.wall_type.layer}: {self.area_finish} м²)"
 
     class Meta:
         verbose_name = 'Отделка стен в помещении'
@@ -125,14 +117,12 @@ class RoomWallType(models.Model):
 
 
 class RoomCeilingType(models.Model):
-    """Промежуточная модель для связи комнаты и типа отделки потолков"""
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='ceiling_types')
     ceiling_type = models.ForeignKey(CeilingType, on_delete=models.CASCADE)
     area_finish = models.FloatField('Площадь отделки', default=0)
 
     def __str__(self):
-        layer = 'Черновой' if self.ceiling_type.layer == 'rough' else 'Чистовой'
-        return f"{self.room} - {self.ceiling_type} ({layer}: {self.area_finish} м²)"
+        return f"{self.room} - {self.ceiling_type} ({self.ceiling_type.layer}: {self.area_finish} м²)"
 
     class Meta:
         verbose_name = 'Отделка потолка в помещении'
@@ -147,13 +137,7 @@ class BaseWorkVolume(models.Model):
     date_added = models.DateTimeField('Дата добавления', blank=True, null=True)
     volume = models.FloatField('Выполненный объем (м²)', default=0)
     completion_percentage = models.FloatField('Процент завершения', default=0)
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name="Пользователь, внесший данные"
-    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Пользователь, внесший данные")
 
     class Meta:
         abstract = True
@@ -163,16 +147,13 @@ class BaseWorkVolume(models.Model):
 
     @property
     def remaining_finish(self):
-        """Вычисляем остаток как разницу между плановой площадью и выполненным объемом"""
         planned_area = self.get_planned_area()
         return max(0, planned_area - self.volume) if planned_area else 0
 
     def get_planned_area(self):
-        """Метод для получения плановой площади (должен быть переопределен в дочерних классах)"""
         raise NotImplementedError("Дочерний класс должен реализовать get_planned_area")
 
     def save(self, *args, **kwargs):
-        """Автоматический пересчет volume или completion_percentage при сохранении"""
         planned_area = self.get_planned_area()
         if planned_area:
             if self.volume and not self.completion_percentage:
@@ -187,8 +168,7 @@ class FloorWorkVolume(BaseWorkVolume):
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='floorworkvolume_volumes')
 
     def __str__(self):
-        layer = 'Черновой' if self.floor_type.layer == 'rough' else 'Чистовой'
-        return f"Полы {self.room} - {self.floor_type} ({layer}: {self.volume} м² выполнено, {self.completion_percentage}%, остаток {self.remaining_finish} м²)"
+        return f"Полы {self.room} - {self.floor_type} ({self.floor_type.layer}: {self.volume} м² выполнено, {self.completion_percentage}%, остаток {self.remaining_finish} м²)"
 
     def get_planned_area(self):
         try:
@@ -202,8 +182,7 @@ class WallWorkVolume(BaseWorkVolume):
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='wallworkvolume_volumes')
 
     def __str__(self):
-        layer = 'Черновой' if self.wall_type.layer == 'rough' else 'Чистовой'
-        return f"Стены {self.room} - {self.wall_type} ({layer}: {self.volume} м² выполнено, {self.completion_percentage}%, остаток {self.remaining_finish} м²)"
+        return f"Стены {self.room} - {self.wall_type} ({self.wall_type.layer}: {self.volume} м² выполнено, {self.completion_percentage}%, остаток {self.remaining_finish} м²)"
 
     def get_planned_area(self):
         try:
@@ -217,8 +196,7 @@ class CeilingWorkVolume(BaseWorkVolume):
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='ceilingworkvolume_volumes')
 
     def __str__(self):
-        layer = 'Черновой' if self.ceiling_type.layer == 'rough' else 'Чистовой'
-        return f"Потолки {self.room} - {self.ceiling_type} ({layer}: {self.volume} м² выполнено, {self.completion_percentage}%, остаток {self.remaining_finish} м²)"
+        return f"Потолки {self.room} - {self.ceiling_type} ({self.ceiling_type.layer}: {self.volume} м² выполнено, {self.completion_percentage}%, остаток {self.remaining_finish} м²)"
 
     def get_planned_area(self):
         try:

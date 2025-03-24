@@ -43,7 +43,7 @@ class BaseFinishType(models.Model):
     )
     type_code = models.CharField('Код', max_length=50, unique=True)
     description = models.TextField('Описание')
-    finish = models.CharField('Отделка', max_length=255, blank=True)
+    finish = models.CharField('Отделка', max_length=255, blank=False)
     layer = models.CharField('Слой', max_length=20, choices=CHOICES, default='Черновой')
 
     def __str__(self):

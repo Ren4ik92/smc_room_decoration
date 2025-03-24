@@ -128,18 +128,25 @@ class RoomViewSet(ModelViewSet):
                         type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."
                     })
                 planned_type = room.floor_types.get(floor_type_id=type_id)
+                # Фильтруем last_volume по конкретному типу
+                last_volume_for_type = model.objects.filter(room=room, floor_type_id=type_id).order_by(
+                    '-datetime').first() if type_field == 'floor_type' else last_volume
             elif type_field == 'wall_type':
                 if not room.wall_types.filter(wall_type_id=type_id).exists():
                     raise ValidationError({
                         type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."
                     })
                 planned_type = room.wall_types.get(wall_type_id=type_id)
+                last_volume_for_type = model.objects.filter(room=room, wall_type_id=type_id).order_by(
+                    '-datetime').first() if type_field == 'wall_type' else last_volume
             elif type_field == 'ceiling_type':
                 if not room.ceiling_types.filter(ceiling_type_id=type_id).exists():
                     raise ValidationError({
                         type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."
                     })
                 planned_type = room.ceiling_types.get(ceiling_type_id=type_id)
+                last_volume_for_type = model.objects.filter(room=room, ceiling_type_id=type_id).order_by(
+                    '-datetime').first() if type_field == 'ceiling_type' else last_volume
             else:
                 raise ValidationError(f"Неожиданный тип поля: {type_field}")
 
@@ -160,15 +167,15 @@ class RoomViewSet(ModelViewSet):
                 completion_percentage = float(completion_percentage)
 
             # Если ничего не указано и это первая запись
-            if last_volume is None and volume is None and completion_percentage is None:
+            if last_volume_for_type is None and volume is None and completion_percentage is None:
                 raise ValidationError(
                     "Для первой записи необходимо указать либо volume, либо completion_percentage."
                 )
 
             # Если ничего не указано, берем значения из последней записи
-            if volume is None and completion_percentage is None and last_volume:
-                volume = last_volume.volume
-                completion_percentage = last_volume.completion_percentage
+            if volume is None and completion_percentage is None and last_volume_for_type:
+                volume = last_volume_for_type.volume
+                completion_percentage = last_volume_for_type.completion_percentage
 
             # Проверяем, что хотя бы одно значение передано или было взято из last_volume
             if volume is None and completion_percentage is None:
@@ -195,12 +202,14 @@ class RoomViewSet(ModelViewSet):
             user = self.request.user
             is_editor = user.groups.filter(name="Editor").exists() or user.is_superuser
 
-            if not is_editor and last_volume:
-                if (volume is not None and volume < last_volume.volume) or \
+            # Проверка на уменьшение только для конкретного типа отделки
+            if not is_editor and last_volume_for_type:
+                if (volume is not None and volume < last_volume_for_type.volume) or \
                         (
-                                completion_percentage is not None and completion_percentage < last_volume.completion_percentage):
+                                completion_percentage is not None and completion_percentage < last_volume_for_type.completion_percentage):
                     raise ValidationError(
-                        "Вы можете только увеличивать объем или процент завершения. Для уменьшения недостаточно прав."
+                        f"Вы можете только увеличивать объем или процент завершения для {type_field} с ID {type_id}. "
+                        f"Для уменьшения недостаточно прав."
                     )
 
             model.objects.create(

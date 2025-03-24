@@ -236,94 +236,94 @@ class RoomViewSet(ModelViewSet):
     #
     #     return Response(history_data, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'], url_path='download-csv')
-    def download_csv(self, request):
-        """
-        Возвращает CSV файл со всеми комнатами и их работами, доступными пользователю,
-        отсортированный по дате добавления записи (от старой к новой).
-        """
-        queryset = self.get_queryset().select_related('project__organization').prefetch_related(
-            'floorworkvolume_volumes', 'floorworkvolume_volumes__floor_type', 'floorworkvolume_volumes__created_by',
-            'wallworkvolume_volumes', 'wallworkvolume_volumes__wall_type', 'wallworkvolume_volumes__created_by',
-            'ceilingworkvolume_volumes', 'ceilingworkvolume_volumes__ceiling_type',
-            'ceilingworkvolume_volumes__created_by'
-        )
-
-        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-        response['Content-Disposition'] = 'attachment; filename="rooms_volumes.csv"'
-
-        fieldnames = [
-            'Room Name', 'Room Code', 'Constructive Element', 'Layer (Rough/Clean)',
-            'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
-            'Remaining Volume (m²)', 'Project', 'Organization', 'User'
-        ]
-
-        writer = csv.DictWriter(response, fieldnames=fieldnames, delimiter=';')
-        writer.writeheader()
-
-        csv_data = []  # Список для хранения данных CSV
-
-        def safe_getattr(obj, attr, default=""):
-            try:
-                return getattr(obj, attr, default) if obj else default
-            except AttributeError:
-                return default
-
-        def write_work_row(room, element_type, layer, type_code, material, date, volume, completion, remaining, user):
-            date_str = date.strftime('%Y-%m-%d %H:%M:%S') if date else "N/A"
-            project = room.project
-            organization = project.organization if project else None
-
-            csv_data.append({
-                'Room Name': safe_getattr(room, 'name'),
-                'Room Code': safe_getattr(room, 'code'),
-                'Constructive Element': element_type,
-                'Layer (Rough/Clean)': layer,
-                'Finish Type Code': type_code,
-                'Material': material,
-                'Date': date_str,
-                'Work Volume (m²)': volume,
-                'Completion (%)': completion,
-                'Remaining Volume (m²)': remaining,
-                'Project': safe_getattr(project, 'name'),
-                'Organization': safe_getattr(organization, 'name'),
-                'User': safe_getattr(user, 'username')
-            })
-
-        def write_work_data(room, element_type, work_volumes, type_attr):
-            for work in work_volumes:
-                type_obj = getattr(work, type_attr, None)
-                finish_type_code = safe_getattr(type_obj, "type_code")
-                user = work.created_by  # Получаем пользователя, который внёс данные
-                for layer, volume_attr, completion_attr, remaining_attr, finish_attr in [
-                    ("Rough", "rough_volume", "rough_completion_percentage", "remaining_rough", "rough_finish"),
-                    ("Clean", "clean_volume", "clean_completion_percentage", "remaining_clean", "clean_finish")
-                ]:
-                    write_work_row(
-                        room,
-                        element_type,
-                        layer,
-                        finish_type_code,
-                        safe_getattr(type_obj, finish_attr),
-                        work.datetime,
-                        getattr(work, volume_attr, 0),
-                        getattr(work, completion_attr, 0),
-                        getattr(work, remaining_attr, 0),
-                        user
-                    )
-
-        for room in queryset:
-            write_work_data(room, "Floor", room.floorworkvolume_volumes.all(), "floor_type")
-            write_work_data(room, "Wall", room.wallworkvolume_volumes.all(), "wall_type")
-            write_work_data(room, "Ceiling", room.ceilingworkvolume_volumes.all(), "ceiling_type")
-
-        # Сортируем csv_data по дате
-        csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
-
-        # Записываем отсортированные данные в CSV
-        writer.writerows(csv_data)
-
-        return response
+    # @action(detail=False, methods=['get'], url_path='download-csv')
+    # def download_csv(self, request):
+    #     """
+    #     Возвращает CSV файл со всеми комнатами и их работами, доступными пользователю,
+    #     отсортированный по дате добавления записи (от старой к новой).
+    #     """
+    #     queryset = self.get_queryset().select_related('project__organization').prefetch_related(
+    #         'floorworkvolume_volumes', 'floorworkvolume_volumes__floor_type', 'floorworkvolume_volumes__created_by',
+    #         'wallworkvolume_volumes', 'wallworkvolume_volumes__wall_type', 'wallworkvolume_volumes__created_by',
+    #         'ceilingworkvolume_volumes', 'ceilingworkvolume_volumes__ceiling_type',
+    #         'ceilingworkvolume_volumes__created_by'
+    #     )
+    #
+    #     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    #     response['Content-Disposition'] = 'attachment; filename="rooms_volumes.csv"'
+    #
+    #     fieldnames = [
+    #         'Room Name', 'Room Code', 'Constructive Element', 'Layer (Rough/Clean)',
+    #         'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
+    #         'Remaining Volume (m²)', 'Project', 'Organization', 'User'
+    #     ]
+    #
+    #     writer = csv.DictWriter(response, fieldnames=fieldnames, delimiter=';')
+    #     writer.writeheader()
+    #
+    #     csv_data = []  # Список для хранения данных CSV
+    #
+    #     def safe_getattr(obj, attr, default=""):
+    #         try:
+    #             return getattr(obj, attr, default) if obj else default
+    #         except AttributeError:
+    #             return default
+    #
+    #     def write_work_row(room, element_type, layer, type_code, material, date, volume, completion, remaining, user):
+    #         date_str = date.strftime('%Y-%m-%d %H:%M:%S') if date else "N/A"
+    #         project = room.project
+    #         organization = project.organization if project else None
+    #
+    #         csv_data.append({
+    #             'Room Name': safe_getattr(room, 'name'),
+    #             'Room Code': safe_getattr(room, 'code'),
+    #             'Constructive Element': element_type,
+    #             'Layer (Rough/Clean)': layer,
+    #             'Finish Type Code': type_code,
+    #             'Material': material,
+    #             'Date': date_str,
+    #             'Work Volume (m²)': volume,
+    #             'Completion (%)': completion,
+    #             'Remaining Volume (m²)': remaining,
+    #             'Project': safe_getattr(project, 'name'),
+    #             'Organization': safe_getattr(organization, 'name'),
+    #             'User': safe_getattr(user, 'username')
+    #         })
+    #
+    #     def write_work_data(room, element_type, work_volumes, type_attr):
+    #         for work in work_volumes:
+    #             type_obj = getattr(work, type_attr, None)
+    #             finish_type_code = safe_getattr(type_obj, "type_code")
+    #             user = work.created_by  # Получаем пользователя, который внёс данные
+    #             for layer, volume_attr, completion_attr, remaining_attr, finish_attr in [
+    #                 ("Rough", "rough_volume", "rough_completion_percentage", "remaining_rough", "rough_finish"),
+    #                 ("Clean", "clean_volume", "clean_completion_percentage", "remaining_clean", "clean_finish")
+    #             ]:
+    #                 write_work_row(
+    #                     room,
+    #                     element_type,
+    #                     layer,
+    #                     finish_type_code,
+    #                     safe_getattr(type_obj, finish_attr),
+    #                     work.datetime,
+    #                     getattr(work, volume_attr, 0),
+    #                     getattr(work, completion_attr, 0),
+    #                     getattr(work, remaining_attr, 0),
+    #                     user
+    #                 )
+    #
+    #     for room in queryset:
+    #         write_work_data(room, "Floor", room.floorworkvolume_volumes.all(), "floor_type")
+    #         write_work_data(room, "Wall", room.wallworkvolume_volumes.all(), "wall_type")
+    #         write_work_data(room, "Ceiling", room.ceilingworkvolume_volumes.all(), "ceiling_type")
+    #
+    #     # Сортируем csv_data по дате
+    #     csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
+    #
+    #     # Записываем отсортированные данные в CSV
+    #     writer.writerows(csv_data)
+    #
+    #     return response
 
     @action(detail=False, methods=['get'], url_path='download-last-volumes-csv')
     def download_last_volumes_csv(self, request):
@@ -338,7 +338,7 @@ class RoomViewSet(ModelViewSet):
         response['Content-Disposition'] = 'attachment; filename="rooms_last_volumes.csv"'
 
         fieldnames = [
-            'Room Name', 'Room Code', 'Constructive Element', 'Layer (Rough/Clean)',
+            'Room Name', 'Room Code', 'Constructive Element', 'Layer',
             'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
             'Remaining Volume (m²)', 'Project', 'Organization', 'User'
         ]
@@ -371,7 +371,7 @@ class RoomViewSet(ModelViewSet):
                 'Room Name': room_data.get("name", ""),
                 'Room Code': room_data.get("code", ""),
                 'Constructive Element': element_type,
-                'Layer (Rough/Clean)': 'Rough' if type_obj.get("layer") == 'rough' else 'Clean',
+                'Layer': type_obj.get("layer", ""),  # Используем значение из данных напрямую
                 'Finish Type Code': type_obj.get("type_code", ""),
                 'Material': type_obj.get("finish", ""),
                 'Date': formatted_date,
@@ -395,7 +395,7 @@ class RoomViewSet(ModelViewSet):
             if ceiling_volumes:
                 write_work_row(room_data, "Ceiling", ceiling_volumes[0], "ceiling_type")
 
-        csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
+        csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "00.00.0000 00:00")
         writer.writerows(csv_data)
         return response
 
@@ -404,13 +404,18 @@ class RoomViewSet(ModelViewSet):
         """
         Возвращает CSV-файл со всеми записями объемов работ для всех комнат без фильтрации по последней дате.
         """
-        queryset = self.get_queryset()
+        queryset = self.get_queryset().prefetch_related(
+            'floorworkvolume_volumes__floor_type',
+            'wallworkvolume_volumes__wall_type',
+            'ceilingworkvolume_volumes__ceiling_type',
+            'project__organization'
+        )
 
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
         response['Content-Disposition'] = 'attachment; filename="rooms_all_volumes.csv"'
 
         fieldnames = [
-            'Room Name', 'Room Code', 'Constructive Element', 'Layer (Rough/Clean)',
+            'Room Name', 'Room Code', 'Constructive Element', 'Layer',
             'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
             'Remaining Volume (m²)', 'Project', 'Organization', 'User'
         ]
@@ -434,7 +439,7 @@ class RoomViewSet(ModelViewSet):
                 'Room Name': room.name,
                 'Room Code': room.code,
                 'Constructive Element': element_type,
-                'Layer (Rough/Clean)': 'Rough' if type_obj.layer == 'rough' else 'Clean',
+                'Layer': type_obj.layer,  # Используем значение layer напрямую
                 'Finish Type Code': type_obj.type_code,
                 'Material': type_obj.finish,
                 'Date': formatted_date,
@@ -447,18 +452,14 @@ class RoomViewSet(ModelViewSet):
             })
 
         for room in queryset:
-            floor_volumes = FloorWorkVolume.objects.filter(room=room).select_related('floor_type')
-            wall_volumes = WallWorkVolume.objects.filter(room=room).select_related('wall_type')
-            ceiling_volumes = CeilingWorkVolume.objects.filter(room=room).select_related('ceiling_type')
-
-            for volume in floor_volumes:
+            for volume in room.floorworkvolume_volumes.all():
                 write_work_row(room, volume, "Floor", volume.floor_type)
-            for volume in wall_volumes:
+            for volume in room.wallworkvolume_volumes.all():
                 write_work_row(room, volume, "Wall", volume.wall_type)
-            for volume in ceiling_volumes:
+            for volume in room.ceilingworkvolume_volumes.all():
                 write_work_row(room, volume, "Ceiling", volume.ceiling_type)
 
-        csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "0000-00-00 00:00:00")
+        csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "00.00.0000 00:00")
         writer.writerows(csv_data)
         return response
 

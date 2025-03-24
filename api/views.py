@@ -78,27 +78,24 @@ class RoomViewSet(ModelViewSet):
         wall_data_list = request.data.get('wall_volumes', [])
         ceiling_data_list = request.data.get('ceiling_volumes', [])
 
-        last_volumes = self._get_last_volumes(room)
-
-        self._process_volumes(room, floor_data_list, FloorWorkVolume, 'floor_type', last_volumes.get('floor_volume'))
-        self._process_volumes(room, wall_data_list, WallWorkVolume, 'wall_type', last_volumes.get('wall_volume'))
-        self._process_volumes(room, ceiling_data_list, CeilingWorkVolume, 'ceiling_type',
-                              last_volumes.get('ceiling_volume'))
+        self._process_volumes(room, floor_data_list, FloorWorkVolume, 'floor_type')
+        self._process_volumes(room, wall_data_list, WallWorkVolume, 'wall_type')
+        self._process_volumes(room, ceiling_data_list, CeilingWorkVolume, 'ceiling_type')
 
         return Response({'status': 'volumes added'}, status=status.HTTP_201_CREATED)
 
-    def _get_last_volumes(self, room):
-        last_floor_volume = FloorWorkVolume.objects.filter(room=room).order_by('-datetime').first()
-        last_wall_volume = WallWorkVolume.objects.filter(room=room).order_by('-datetime').first()
-        last_ceiling_volume = CeilingWorkVolume.objects.filter(room=room).order_by('-datetime').first()
+    # def _get_last_volumes(self, room):
+    #     last_floor_volume = FloorWorkVolume.objects.filter(room=room).order_by('-datetime').first()
+    #     last_wall_volume = WallWorkVolume.objects.filter(room=room).order_by('-datetime').first()
+    #     last_ceiling_volume = CeilingWorkVolume.objects.filter(room=room).order_by('-datetime').first()
+    #
+    #     return {
+    #         'floor_volume': last_floor_volume,
+    #         'wall_volume': last_wall_volume,
+    #         'ceiling_volume': last_ceiling_volume,
+    #     }
 
-        return {
-            'floor_volume': last_floor_volume,
-            'wall_volume': last_wall_volume,
-            'ceiling_volume': last_ceiling_volume,
-        }
-
-    def _process_volumes(self, room, volumes_data, model, type_field, last_volume):
+    def _process_volumes(self, room, volumes_data, model, type_field):
         type_model_map = {
             'floor_type': FloorType,
             'wall_type': WallType,
@@ -128,9 +125,8 @@ class RoomViewSet(ModelViewSet):
                         type_field: f"{type_field} с ID {type_id} не соответствует планируемым типам отделки комнаты."
                     })
                 planned_type = room.floor_types.get(floor_type_id=type_id)
-                # Фильтруем last_volume по конкретному типу
                 last_volume_for_type = model.objects.filter(room=room, floor_type_id=type_id).order_by(
-                    '-datetime').first() if type_field == 'floor_type' else last_volume
+                    '-datetime').first()
             elif type_field == 'wall_type':
                 if not room.wall_types.filter(wall_type_id=type_id).exists():
                     raise ValidationError({
@@ -138,7 +134,7 @@ class RoomViewSet(ModelViewSet):
                     })
                 planned_type = room.wall_types.get(wall_type_id=type_id)
                 last_volume_for_type = model.objects.filter(room=room, wall_type_id=type_id).order_by(
-                    '-datetime').first() if type_field == 'wall_type' else last_volume
+                    '-datetime').first()
             elif type_field == 'ceiling_type':
                 if not room.ceiling_types.filter(ceiling_type_id=type_id).exists():
                     raise ValidationError({
@@ -146,7 +142,7 @@ class RoomViewSet(ModelViewSet):
                     })
                 planned_type = room.ceiling_types.get(ceiling_type_id=type_id)
                 last_volume_for_type = model.objects.filter(room=room, ceiling_type_id=type_id).order_by(
-                    '-datetime').first() if type_field == 'ceiling_type' else last_volume
+                    '-datetime').first()
             else:
                 raise ValidationError(f"Неожиданный тип поля: {type_field}")
 

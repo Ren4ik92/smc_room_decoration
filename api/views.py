@@ -343,9 +343,19 @@ class RoomViewSet(ModelViewSet):
         response['Content-Disposition'] = 'attachment; filename="rooms_last_volumes.csv"'
 
         fieldnames = [
-            'Room Name', 'Room Code', 'Constructive Element', 'Layer',
-            'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
-            'Remaining Volume (m²)', 'Project', 'Organization', 'User'
+            'Название комнаты',  # 'Room Name'
+            'Код комнаты',  # 'Room Code'
+            'Конструктивный элемент',  # 'Constructive Element'
+            'Слой',  # 'Layer'
+            'Код типа отделки',  # 'Finish Type Code'
+            'Материал',  # 'Material'
+            'Дата',  # 'Date'
+            'Объем работ (м²)',  # 'Work Volume (m²)'
+            'Завершение (%)',  # 'Completion (%)'
+            'Оставшийся объем (м²)',  # 'Remaining Volume (m²)'
+            'Проект',  # 'Project'
+            'Организация',  # 'Organization'
+            'Пользователь'  # 'User'
         ]
         writer = csv.DictWriter(response, fieldnames=fieldnames, delimiter=';')
         writer.writeheader()
@@ -373,19 +383,19 @@ class RoomViewSet(ModelViewSet):
                 formatted_date = "N/A"
 
             csv_data.append({
-                'Room Name': room_data.get("name", ""),
-                'Room Code': room_data.get("code", ""),
-                'Constructive Element': element_type,
-                'Layer': type_obj.get("layer", ""),  # Используем значение из данных напрямую
-                'Finish Type Code': type_obj.get("type_code", ""),
-                'Material': type_obj.get("finish", ""),
-                'Date': formatted_date,
-                'Work Volume (m²)': volume_data.get("volume", 0),
-                'Completion (%)': volume_data.get("completion_percentage", 0),
-                'Remaining Volume (m²)': volume_data.get("remaining_finish", 0),
-                'Project': project.get("name", ""),
-                'Organization': organization.get("name", ""),
-                'User': volume_data.get("created_by", ""),
+                'Название комнаты': room_data.get("name", ""),
+                'Код комнаты': room_data.get("code", ""),
+                'Конструктивный элемент': element_type,
+                'Слой': type_obj.get("layer", ""),
+                'Код типа отделки': type_obj.get("type_code", ""),
+                'Материал': type_obj.get("finish", ""),
+                'Дата': formatted_date,
+                'Объем работ (м²)': volume_data.get("volume", 0),
+                'Завершение (%)': volume_data.get("completion_percentage", 0),
+                'Оставшийся объем (м²)': volume_data.get("remaining_finish", 0),
+                'Проект': project.get("name", ""),
+                'Организация': organization.get("name", ""),
+                'Пользователь': volume_data.get("created_by", ""),
             })
 
         for room_data in rooms_data:
@@ -394,13 +404,13 @@ class RoomViewSet(ModelViewSet):
             ceiling_volumes = room_data.get("ceiling_volumes", [])
 
             if floor_volumes:
-                write_work_row(room_data, "Floor", floor_volumes[0], "floor_type")
+                write_work_row(room_data, "Пол", floor_volumes[0], "floor_type")
             if wall_volumes:
-                write_work_row(room_data, "Wall", wall_volumes[0], "wall_type")
+                write_work_row(room_data, "Стена", wall_volumes[0], "wall_type")
             if ceiling_volumes:
-                write_work_row(room_data, "Ceiling", ceiling_volumes[0], "ceiling_type")
+                write_work_row(room_data, "Потолок", ceiling_volumes[0], "ceiling_type")
 
-        csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "00.00.0000 00:00")
+        csv_data.sort(key=lambda x: x['Дата'] if x['Дата'] != "N/A" else "00.00.0000 00:00")
         writer.writerows(csv_data)
         return response
 
@@ -420,9 +430,19 @@ class RoomViewSet(ModelViewSet):
         response['Content-Disposition'] = 'attachment; filename="rooms_all_volumes.csv"'
 
         fieldnames = [
-            'Room Name', 'Room Code', 'Constructive Element', 'Layer',
-            'Finish Type Code', 'Material', 'Date', 'Work Volume (m²)', 'Completion (%)',
-            'Remaining Volume (m²)', 'Project', 'Organization', 'User'
+            'Название комнаты',  # 'Room Name'
+            'Код комнаты',  # 'Room Code'
+            'Конструктивный элемент',  # 'Constructive Element'
+            'Слой',  # 'Layer'
+            'Код типа отделки',  # 'Finish Type Code'
+            'Материал',  # 'Material'
+            'Дата',  # 'Date'
+            'Объем работ (м²)',  # 'Work Volume (m²)'
+            'Завершение (%)',  # 'Completion (%)'
+            'Оставшийся объем (м²)',  # 'Remaining Volume (m²)'
+            'Проект',  # 'Project'
+            'Организация',  # 'Organization'
+            'Пользователь'  # 'User'
         ]
         writer = csv.DictWriter(response, fieldnames=fieldnames, delimiter=';')
         writer.writeheader()
@@ -441,30 +461,30 @@ class RoomViewSet(ModelViewSet):
                 formatted_date = "N/A"
 
             csv_data.append({
-                'Room Name': room.name,
-                'Room Code': room.code,
-                'Constructive Element': element_type,
-                'Layer': type_obj.layer,  # Используем значение layer напрямую
-                'Finish Type Code': type_obj.type_code,
-                'Material': type_obj.finish,
-                'Date': formatted_date,
-                'Work Volume (m²)': volume.volume,
-                'Completion (%)': volume.completion_percentage,
-                'Remaining Volume (m²)': volume.remaining_finish,
-                'Project': room.project.name if room.project else "",
-                'Organization': room.project.organization.name if room.project and room.project.organization else "",
-                'User': str(volume.created_by) if volume.created_by else "",
+                'Название комнаты': room.name,
+                'Код комнаты': room.code,
+                'Конструктивный элемент': element_type,
+                'Слой': type_obj.layer,
+                'Код типа отделки': type_obj.type_code,
+                'Материал': type_obj.finish,
+                'Дата': formatted_date,
+                'Объем работ (м²)': volume.volume,
+                'Завершение (%)': volume.completion_percentage,
+                'Оставшийся объем (м²)': volume.remaining_finish,
+                'Проект': room.project.name if room.project else "",
+                'Организация': room.project.organization.name if room.project and room.project.organization else "",
+                'Пользователь': str(volume.created_by) if volume.created_by else "",
             })
 
         for room in queryset:
             for volume in room.floorworkvolume_volumes.all():
-                write_work_row(room, volume, "Floor", volume.floor_type)
+                write_work_row(room, volume, "Пол", volume.floor_type)
             for volume in room.wallworkvolume_volumes.all():
-                write_work_row(room, volume, "Wall", volume.wall_type)
+                write_work_row(room, volume, "Стена", volume.wall_type)
             for volume in room.ceilingworkvolume_volumes.all():
-                write_work_row(room, volume, "Ceiling", volume.ceiling_type)
+                write_work_row(room, volume, "Потолок", volume.ceiling_type)
 
-        csv_data.sort(key=lambda x: x['Date'] if x['Date'] != "N/A" else "00.00.0000 00:00")
+        csv_data.sort(key=lambda x: x['Дата'] if x['Дата'] != "N/A" else "00.00.0000 00:00")
         writer.writerows(csv_data)
         return response
 

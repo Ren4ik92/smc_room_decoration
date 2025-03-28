@@ -30,15 +30,16 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
     volume = serializers.DecimalField(max_digits=10, decimal_places=1)
     completion_percentage = serializers.DecimalField(max_digits=5, decimal_places=2)
     remaining_finish = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
-    remaining_percentage = serializers.SerializerMethodField()
+    remaining_percentage = serializers.SerializerMethodField()  # Новое поле для остатка в процентах
     created_by = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = FloorWorkVolume
         fields = ['id', 'floor_type', 'volume', 'completion_percentage', 'remaining_finish', 'remaining_percentage',
-                  'note', 'datetime', 'date_added', 'date_started', 'date_finished', 'created_by']  # Добавлены поля
+                  'note', 'datetime', 'date_started', 'date_finished', 'date_added', 'created_by']
 
     def get_remaining_percentage(self, obj):
+        """Вычисляем остаток в процентах как 100 - completion_percentage"""
         return round(100 - obj.completion_percentage, 2)
 
     @staticmethod
@@ -46,11 +47,13 @@ class FloorWorkVolumeReadSerializer(serializers.ModelSerializer):
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_floor_types = set()
+
         for volume in sorted_volumes:
             floor_type_id = volume['floor_type']['id']
             if floor_type_id not in seen_floor_types:
                 latest_volumes.append(volume)
                 seen_floor_types.add(floor_type_id)
+
         return latest_volumes
 
 
@@ -65,15 +68,16 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
     volume = serializers.DecimalField(max_digits=10, decimal_places=1)
     completion_percentage = serializers.DecimalField(max_digits=5, decimal_places=2)
     remaining_finish = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
-    remaining_percentage = serializers.SerializerMethodField()
+    remaining_percentage = serializers.SerializerMethodField()  # Новое поле для остатка в процентах
     created_by = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = WallWorkVolume
         fields = ['id', 'wall_type', 'volume', 'completion_percentage', 'remaining_finish', 'remaining_percentage',
-                  'note', 'datetime', 'date_added', 'date_started', 'date_finished', 'created_by']  # Добавлены поля
+                  'note', 'datetime', 'date_started', 'date_finished', 'date_added', 'created_by']
 
     def get_remaining_percentage(self, obj):
+        """Вычисляем остаток в процентах как 100 - completion_percentage"""
         return round(100 - obj.completion_percentage, 2)
 
     @staticmethod
@@ -81,11 +85,13 @@ class WallWorkVolumeReadSerializer(serializers.ModelSerializer):
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_wall_types = set()
+
         for volume in sorted_volumes:
             wall_type_id = volume['wall_type']['id']
             if wall_type_id not in seen_wall_types:
                 latest_volumes.append(volume)
                 seen_wall_types.add(wall_type_id)
+
         return latest_volumes
 
 
@@ -100,15 +106,16 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
     volume = serializers.DecimalField(max_digits=10, decimal_places=1)
     completion_percentage = serializers.DecimalField(max_digits=5, decimal_places=2)
     remaining_finish = serializers.DecimalField(max_digits=10, decimal_places=1, read_only=True)
-    remaining_percentage = serializers.SerializerMethodField()
+    remaining_percentage = serializers.SerializerMethodField()  # Новое поле для остатка в процентах
     created_by = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = CeilingWorkVolume
         fields = ['id', 'ceiling_type', 'volume', 'completion_percentage', 'remaining_finish', 'remaining_percentage',
-                  'note', 'datetime', 'date_added', 'date_started', 'date_finished', 'created_by']  # Добавлены поля
+                  'note', 'date_started', 'date_finished', 'datetime', 'date_added', 'created_by']
 
     def get_remaining_percentage(self, obj):
+        """Вычисляем остаток в процентах как 100 - completion_percentage"""
         return round(100 - obj.completion_percentage, 2)
 
     @staticmethod
@@ -116,11 +123,13 @@ class CeilingWorkVolumeReadSerializer(serializers.ModelSerializer):
         sorted_volumes = sorted(volumes, key=lambda x: x['datetime'], reverse=True)
         latest_volumes = []
         seen_ceiling_types = set()
+
         for volume in sorted_volumes:
             ceiling_type_id = volume['ceiling_type']['id']
             if ceiling_type_id not in seen_ceiling_types:
                 latest_volumes.append(volume)
                 seen_ceiling_types.add(ceiling_type_id)
+
         return latest_volumes
 
 

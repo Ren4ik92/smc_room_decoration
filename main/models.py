@@ -101,6 +101,7 @@ class RoomFloorType(models.Model):
     class Meta:
         verbose_name = 'Отделка пола в помещении'
         verbose_name_plural = 'Отделки полов в помещениях'
+        unique_together = ('room', 'floor_type')  # Ограничение уникальности
 
 
 class RoomWallType(models.Model):
@@ -114,6 +115,7 @@ class RoomWallType(models.Model):
     class Meta:
         verbose_name = 'Отделка стен в помещении'
         verbose_name_plural = 'Отделки стен в помещениях'
+        unique_together = ('room', 'wall_type')  # Ограничение уникальности
 
 
 class RoomCeilingType(models.Model):
@@ -127,6 +129,7 @@ class RoomCeilingType(models.Model):
     class Meta:
         verbose_name = 'Отделка потолка в помещении'
         verbose_name_plural = 'Отделки потолков в помещениях'
+        unique_together = ('room', 'ceiling_type')  # Ограничение уникальности
 
 
 class BaseWorkVolume(models.Model):

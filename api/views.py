@@ -334,6 +334,8 @@ class RoomViewSet(ModelViewSet):
     def download_last_volumes_csv(self, request):
         """
         Возвращает CSV-файл с последними записями объемов работ для всех комнат.
+        Если записей о работах нет, используются данные из планируемых типов отделки с нулями.
+        Если нет ни работ, ни планируемого типа, строка не включается.
         """
         queryset = self.get_queryset()
         serializer = RoomReadSerializer(queryset, many=True)
@@ -343,45 +345,63 @@ class RoomViewSet(ModelViewSet):
         response['Content-Disposition'] = 'attachment; filename="rooms_last_volumes.csv"'
 
         fieldnames = [
-            'Название комнаты',  # 'Room Name'
-            'Код комнаты',  # 'Room Code'
-            'Конструктивный элемент',  # 'Constructive Element'
-            'Слой',  # 'Layer'
-            'Код типа отделки',  # 'Finish Type Code'
-            'Материал',  # 'Material'
-            'Дата',  # 'Date'
-            'Объем работ (м²)',  # 'Work Volume (m²)'
-            'Завершение (%)',  # 'Completion (%)'
-            'Оставшийся объем (м²)',  # 'Remaining Volume (m²)'
-            'Проект',  # 'Project'
-            'Организация',  # 'Organization'
-            'Пользователь'  # 'User'
+            'Название комнаты', 'Код комнаты', 'Конструктивный элемент', 'Слой', 'Код типа отделки', 'Материал',
+            'Дата начала работ', 'Дата окончания работ', 'Объем работ (м²)', 'Завершение (%)', 'Оставшийся объем (м²)',
+            'Планируемая площадь (м²)', 'Проект', 'Организация', 'Пользователь', 'Дата'
         ]
         writer = csv.DictWriter(response, fieldnames=fieldnames, delimiter=';')
         writer.writeheader()
 
         csv_data = []
-        local_tz = pytz.timezone('Europe/Moscow')  # Укажите вашу временную зону
+        local_tz = pytz.timezone('Europe/Moscow')
 
-        def write_work_row(room_data, element_type, volume_data, type_field):
-            if not volume_data:
-                return
-            type_obj = volume_data.get(type_field, {})
+        def write_work_row(room_data, element_type, volume_data, type_field, planning_field):
             project = room_data.get("project", {})
             organization = room_data.get("organization", {})
-            raw_date = volume_data.get("datetime", "N/A")
-            if raw_date != "N/A":
-                try:
-                    date_obj = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
-                    if date_obj.tzinfo is None:
-                        date_obj = pytz.utc.localize(date_obj)
-                    local_date = date_obj.astimezone(local_tz)
-                    formatted_date = local_date.strftime("%d.%m.%Y %H:%M")
-                except ValueError:
-                    formatted_date = raw_date
-            else:
-                formatted_date = "N/A"
 
+            if volume_data:  # Если есть данные о работах
+                type_obj = volume_data.get(type_field, {})
+                # Форматирование даты создания
+                raw_date = volume_data.get("datetime", "N/A")
+                formatted_date = "N/A" if raw_date == "N/A" else (
+                    pytz.utc.localize(datetime.fromisoformat(raw_date.replace("Z", "+00:00")))
+                    if datetime.fromisoformat(raw_date.replace("Z", "+00:00")).tzinfo is None
+                    else datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+                ).astimezone(local_tz).strftime("%d.%m.%Y %H:%M")
+
+                # Форматирование даты начала работ
+                raw_start_date = volume_data.get("date_started", "N/A")
+                formatted_start_date = "N/A" if raw_start_date == "N/A" else (
+                    pytz.utc.localize(datetime.fromisoformat(raw_start_date.replace("Z", "+00:00")))
+                    if datetime.fromisoformat(raw_start_date.replace("Z", "+00:00")).tzinfo is None
+                    else datetime.fromisoformat(raw_start_date.replace("Z", "+00:00"))
+                ).astimezone(local_tz).strftime("%d.%m.%Y %H:%M")
+
+                # Форматирование даты окончания работ
+                raw_finish_date = volume_data.get("date_finished", "N/A")
+                formatted_finish_date = "N/A" if raw_finish_date == "N/A" else (
+                    pytz.utc.localize(datetime.fromisoformat(raw_finish_date.replace("Z", "+00:00")))
+                    if datetime.fromisoformat(raw_finish_date.replace("Z", "+00:00")).tzinfo is None
+                    else datetime.fromisoformat(raw_finish_date.replace("Z", "+00:00"))
+                ).astimezone(local_tz).strftime("%d.%m.%Y %H:%M")
+
+                # Получение планируемой площади
+                planned_area = 0
+                for planning in room_data.get(planning_field, []):
+                    if planning[type_field]['id'] == type_obj['id']:
+                        planned_area = planning['area_finish']
+                        break
+            else:  # Если данных о работах нет, проверяем планируемые типы
+                planned_types = room_data.get(planning_field, [])
+                if not planned_types or len(planned_types) == 0:
+                    return  # Пропускаем строку, если нет ни работ, ни планируемого типа
+                type_obj = planned_types[0].get(type_field, {})  # Берем первый планируемый тип
+                formatted_date = "N/A"
+                formatted_start_date = "N/A"
+                formatted_finish_date = "N/A"
+                planned_area = planned_types[0].get("area_finish", 0)
+
+            # Добавляем строку только если есть тип отделки (либо из volume_data, либо из planned_types)
             csv_data.append({
                 'Название комнаты': room_data.get("name", ""),
                 'Код комнаты': room_data.get("code", ""),
@@ -389,13 +409,16 @@ class RoomViewSet(ModelViewSet):
                 'Слой': type_obj.get("layer", ""),
                 'Код типа отделки': type_obj.get("type_code", ""),
                 'Материал': type_obj.get("finish", ""),
-                'Дата': formatted_date,
-                'Объем работ (м²)': volume_data.get("volume", 0),
-                'Завершение (%)': volume_data.get("completion_percentage", 0),
-                'Оставшийся объем (м²)': volume_data.get("remaining_finish", 0),
+                'Дата начала работ': formatted_start_date,
+                'Дата окончания работ': formatted_finish_date,
+                'Объем работ (м²)': volume_data.get("volume", 0) if volume_data else 0,
+                'Завершение (%)': volume_data.get("completion_percentage", 0) if volume_data else 0,
+                'Оставшийся объем (м²)': volume_data.get("remaining_finish", 0) if volume_data else 0,
+                'Планируемая площадь (м²)': planned_area,
                 'Проект': project.get("name", ""),
                 'Организация': organization.get("name", ""),
-                'Пользователь': volume_data.get("created_by", ""),
+                'Пользователь': volume_data.get("created_by", "") if volume_data else "",
+                'Дата': formatted_date,
             })
 
         for room_data in rooms_data:
@@ -403,12 +426,23 @@ class RoomViewSet(ModelViewSet):
             wall_volumes = room_data.get("wall_volumes", [])
             ceiling_volumes = room_data.get("ceiling_volumes", [])
 
+            # Обрабатываем полы
             if floor_volumes:
-                write_work_row(room_data, "Пол", floor_volumes[0], "floor_type")
+                write_work_row(room_data, "Пол", floor_volumes[0], "floor_type", "planning_type_floor")
+            else:
+                write_work_row(room_data, "Пол", None, "floor_type", "planning_type_floor")
+
+            # Обрабатываем стены
             if wall_volumes:
-                write_work_row(room_data, "Стена", wall_volumes[0], "wall_type")
+                write_work_row(room_data, "Стена", wall_volumes[0], "wall_type", "planning_type_wall")
+            else:
+                write_work_row(room_data, "Стена", None, "wall_type", "planning_type_wall")
+
+            # Обрабатываем потолки
             if ceiling_volumes:
-                write_work_row(room_data, "Потолок", ceiling_volumes[0], "ceiling_type")
+                write_work_row(room_data, "Потолок", ceiling_volumes[0], "ceiling_type", "planning_type_ceiling")
+            else:
+                write_work_row(room_data, "Потолок", None, "ceiling_type", "planning_type_ceiling")
 
         csv_data.sort(key=lambda x: x['Дата'] if x['Дата'] != "N/A" else "00.00.0000 00:00")
         writer.writerows(csv_data)
@@ -418,47 +452,70 @@ class RoomViewSet(ModelViewSet):
     def download_all_volumes_csv(self, request):
         """
         Возвращает CSV-файл со всеми записями объемов работ для всех комнат без фильтрации по последней дате.
+        Включает поле 'Текущий объем минус предыдущий' для отслеживания изменений объема.
         """
         queryset = self.get_queryset().prefetch_related(
             'floorworkvolume_volumes__floor_type',
             'wallworkvolume_volumes__wall_type',
             'ceilingworkvolume_volumes__ceiling_type',
-            'project__organization'
+            'project__organization',
+            'floor_types',
+            'wall_types',
+            'ceiling_types'
         )
 
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
         response['Content-Disposition'] = 'attachment; filename="rooms_all_volumes.csv"'
 
         fieldnames = [
-            'Название комнаты',  # 'Room Name'
-            'Код комнаты',  # 'Room Code'
-            'Конструктивный элемент',  # 'Constructive Element'
-            'Слой',  # 'Layer'
-            'Код типа отделки',  # 'Finish Type Code'
-            'Материал',  # 'Material'
-            'Дата',  # 'Date'
-            'Объем работ (м²)',  # 'Work Volume (m²)'
-            'Завершение (%)',  # 'Completion (%)'
-            'Оставшийся объем (м²)',  # 'Remaining Volume (m²)'
-            'Проект',  # 'Project'
-            'Организация',  # 'Organization'
-            'Пользователь'  # 'User'
+            'Название комнаты', 'Код комнаты', 'Конструктивный элемент', 'Слой', 'Код типа отделки', 'Материал',
+            'Дата начала работ', 'Дата окончания работ', 'Объем работ (м²)', 'Завершение (%)', 'Оставшийся объем (м²)',
+            'Планируемая площадь (м²)', 'Текущий объем минус предыдущий',  # Новое поле
+            'Проект', 'Организация', 'Пользователь', 'Дата'
         ]
         writer = csv.DictWriter(response, fieldnames=fieldnames, delimiter=';')
         writer.writeheader()
 
         csv_data = []
-        local_tz = pytz.timezone('Europe/Moscow')  # Укажите вашу временную зону
+        local_tz = pytz.timezone('Europe/Moscow')
 
         def write_work_row(room, volume, element_type, type_obj):
             raw_date = volume.datetime
-            if raw_date:
-                if raw_date.tzinfo is None:  # Если дата naive
-                    raw_date = pytz.utc.localize(raw_date)
-                local_date = raw_date.astimezone(local_tz)
-                formatted_date = local_date.strftime("%d.%m.%Y %H:%M")
+            formatted_date = "N/A" if not raw_date else (
+                raw_date if raw_date.tzinfo else pytz.utc.localize(raw_date)
+            ).astimezone(local_tz).strftime("%d.%m.%Y %H:%M")
+
+            start_date = volume.date_started
+            formatted_start_date = "N/A" if not start_date else (
+                start_date if start_date.tzinfo else pytz.utc.localize(start_date)
+            ).astimezone(local_tz).strftime("%d.%m.%Y %H:%M")
+
+            finish_date = volume.date_finished
+            formatted_finish_date = "N/A" if not finish_date else (
+                finish_date if finish_date.tzinfo else pytz.utc.localize(finish_date)
+            ).astimezone(local_tz).strftime("%d.%m.%Y %H:%M")
+
+            planned_area = volume.get_planned_area()
+
+            # Вычисление разницы с предыдущим объемом
+            if element_type == "Пол":
+                previous_volume = FloorWorkVolume.objects.filter(
+                    room=room, floor_type=volume.floor_type, datetime__lt=volume.datetime
+                ).order_by('-datetime').first()
+            elif element_type == "Стена":
+                previous_volume = WallWorkVolume.objects.filter(
+                    room=room, wall_type=volume.wall_type, datetime__lt=volume.datetime
+                ).order_by('-datetime').first()
+            elif element_type == "Потолок":
+                previous_volume = CeilingWorkVolume.objects.filter(
+                    room=room, ceiling_type=volume.ceiling_type, datetime__lt=volume.datetime
+                ).order_by('-datetime').first()
             else:
-                formatted_date = "N/A"
+                previous_volume = None
+
+            volume_diff = (
+                volume.volume - previous_volume.volume if previous_volume else volume.volume
+            )  # Разница с предыдущим или текущий объем, если это первая запись
 
             csv_data.append({
                 'Название комнаты': room.name,
@@ -467,13 +524,17 @@ class RoomViewSet(ModelViewSet):
                 'Слой': type_obj.layer,
                 'Код типа отделки': type_obj.type_code,
                 'Материал': type_obj.finish,
-                'Дата': formatted_date,
+                'Дата начала работ': formatted_start_date,
+                'Дата окончания работ': formatted_finish_date,
                 'Объем работ (м²)': volume.volume,
                 'Завершение (%)': volume.completion_percentage,
                 'Оставшийся объем (м²)': volume.remaining_finish,
+                'Планируемая площадь (м²)': planned_area,
+                'Текущий объем минус предыдущий': volume_diff,
                 'Проект': room.project.name if room.project else "",
                 'Организация': room.project.organization.name if room.project and room.project.organization else "",
                 'Пользователь': str(volume.created_by) if volume.created_by else "",
+                'Дата': formatted_date,
             })
 
         for room in queryset:

@@ -135,6 +135,8 @@ class BaseWorkVolume(models.Model):
     note = models.TextField('Примечание', null=True, blank=True)
     datetime = models.DateTimeField('Дата создания', auto_now_add=True)
     date_added = models.DateTimeField('Дата добавления', blank=True, null=True)
+    date_started = models.DateTimeField('Дата начала работ', auto_now_add=True)
+    date_finished = models.DateTimeField('Дата завершения работ', auto_now_add=True)
     volume = models.FloatField('Выполненный объем (м²)', default=0)
     completion_percentage = models.FloatField('Процент завершения', default=0)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Пользователь, внесший данные")

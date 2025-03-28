@@ -334,7 +334,7 @@ class RoomViewSet(ModelViewSet):
     def download_last_volumes_csv(self, request):
         """
         Возвращает CSV-файл с последними записями объемов работ для всех комнат.
-        Если записей о работах нет, используются данные из планируемых типов отделки с нулями.
+        Если записей о работах нет, для каждого планируемого типа отделки добавляется строка с нулями.
         Если нет ни работ, ни планируемого типа, строка не включается.
         """
         queryset = self.get_queryset()
@@ -361,7 +361,6 @@ class RoomViewSet(ModelViewSet):
 
             if volume_data:  # Если есть данные о работах
                 type_obj = volume_data.get(type_field, {})
-                # Форматирование даты создания
                 raw_date = volume_data.get("datetime", "N/A")
                 formatted_date = "N/A" if raw_date == "N/A" else (
                     pytz.utc.localize(datetime.fromisoformat(raw_date.replace("Z", "+00:00")))
@@ -369,7 +368,6 @@ class RoomViewSet(ModelViewSet):
                     else datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
                 ).astimezone(local_tz).strftime("%d.%m.%Y %H:%M")
 
-                # Форматирование даты начала работ
                 raw_start_date = volume_data.get("date_started", "N/A")
                 formatted_start_date = "N/A" if raw_start_date == "N/A" else (
                     pytz.utc.localize(datetime.fromisoformat(raw_start_date.replace("Z", "+00:00")))
@@ -377,7 +375,6 @@ class RoomViewSet(ModelViewSet):
                     else datetime.fromisoformat(raw_start_date.replace("Z", "+00:00"))
                 ).astimezone(local_tz).strftime("%d.%m.%Y %H:%M")
 
-                # Форматирование даты окончания работ
                 raw_finish_date = volume_data.get("date_finished", "N/A")
                 formatted_finish_date = "N/A" if raw_finish_date == "N/A" else (
                     pytz.utc.localize(datetime.fromisoformat(raw_finish_date.replace("Z", "+00:00")))
@@ -385,41 +382,59 @@ class RoomViewSet(ModelViewSet):
                     else datetime.fromisoformat(raw_finish_date.replace("Z", "+00:00"))
                 ).astimezone(local_tz).strftime("%d.%m.%Y %H:%M")
 
-                # Получение планируемой площади
                 planned_area = 0
                 for planning in room_data.get(planning_field, []):
                     if planning[type_field]['id'] == type_obj['id']:
                         planned_area = planning['area_finish']
                         break
-            else:  # Если данных о работах нет, проверяем планируемые типы
+
+                # Добавляем строку для существующей записи
+                csv_data.append({
+                    'Название комнаты': room_data.get("name", ""),
+                    'Код комнаты': room_data.get("code", ""),
+                    'Конструктивный элемент': element_type,
+                    'Слой': type_obj.get("layer", ""),
+                    'Код типа отделки': type_obj.get("type_code", ""),
+                    'Материал': type_obj.get("finish", ""),
+                    'Дата начала работ': formatted_start_date,
+                    'Дата окончания работ': formatted_finish_date,
+                    'Объем работ (м²)': volume_data.get("volume", 0),
+                    'Завершение (%)': volume_data.get("completion_percentage", 0),
+                    'Оставшийся объем (м²)': volume_data.get("remaining_finish", 0),
+                    'Планируемая площадь (м²)': planned_area,
+                    'Проект': project.get("name", ""),
+                    'Организация': organization.get("name", ""),
+                    'Пользователь': volume_data.get("created_by", ""),
+                    'Дата': formatted_date,
+                })
+            else:  # Если данных о работах нет, добавляем строки для всех планируемых типов
                 planned_types = room_data.get(planning_field, [])
                 if not planned_types or len(planned_types) == 0:
-                    return  # Пропускаем строку, если нет ни работ, ни планируемого типа
-                type_obj = planned_types[0].get(type_field, {})  # Берем первый планируемый тип
-                formatted_date = "N/A"
-                formatted_start_date = "N/A"
-                formatted_finish_date = "N/A"
-                planned_area = planned_types[0].get("area_finish", 0)
+                    return  # Пропускаем, если нет планируемых типов
 
-            # Добавляем строку только если есть тип отделки (либо из volume_data, либо из planned_types)
-            csv_data.append({
-                'Название комнаты': room_data.get("name", ""),
-                'Код комнаты': room_data.get("code", ""),
-                'Конструктивный элемент': element_type,
-                'Слой': type_obj.get("layer", ""),
-                'Код типа отделки': type_obj.get("type_code", ""),
-                'Материал': type_obj.get("finish", ""),
-                'Дата начала работ': formatted_start_date,
-                'Дата окончания работ': formatted_finish_date,
-                'Объем работ (м²)': volume_data.get("volume", 0) if volume_data else 0,
-                'Завершение (%)': volume_data.get("completion_percentage", 0) if volume_data else 0,
-                'Оставшийся объем (м²)': volume_data.get("remaining_finish", 0) if volume_data else 0,
-                'Планируемая площадь (м²)': planned_area,
-                'Проект': project.get("name", ""),
-                'Организация': organization.get("name", ""),
-                'Пользователь': volume_data.get("created_by", "") if volume_data else "",
-                'Дата': formatted_date,
-            })
+                # Обходим все планируемые типы
+                for planned_type in planned_types:
+                    type_obj = planned_type.get(type_field, {})
+                    planned_area = planned_type.get("area_finish", 0)
+
+                    csv_data.append({
+                        'Название комнаты': room_data.get("name", ""),
+                        'Код комнаты': room_data.get("code", ""),
+                        'Конструктивный элемент': element_type,
+                        'Слой': type_obj.get("layer", ""),
+                        'Код типа отделки': type_obj.get("type_code", ""),
+                        'Материал': type_obj.get("finish", ""),
+                        'Дата начала работ': "N/A",
+                        'Дата окончания работ': "N/A",
+                        'Объем работ (м²)': 0,
+                        'Завершение (%)': 0,
+                        'Оставшийся объем (м²)': 0,
+                        'Планируемая площадь (м²)': planned_area,
+                        'Проект': project.get("name", ""),
+                        'Организация': organization.get("name", ""),
+                        'Пользователь': "",
+                        'Дата': "N/A",
+                    })
 
         for room_data in rooms_data:
             floor_volumes = room_data.get("floor_volumes", [])

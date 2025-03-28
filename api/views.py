@@ -334,8 +334,8 @@ class RoomViewSet(ModelViewSet):
     def download_last_volumes_csv(self, request):
         """
         Возвращает CSV-файл с последними записями объемов работ для всех комнат.
-        Если записей о работах нет, для каждого планируемого типа отделки добавляется строка с нулями.
-        Если нет ни работ, ни планируемого типа, строка не включается.
+        Учитываются последние записи для каждого типа отделки (черновой и чистовой).
+        Если записей нет, добавляются планируемые типы с нулями.
         """
         queryset = self.get_queryset()
         serializer = RoomReadSerializer(queryset, many=True)
@@ -388,7 +388,6 @@ class RoomViewSet(ModelViewSet):
                         planned_area = planning['area_finish']
                         break
 
-                # Добавляем строку для существующей записи
                 csv_data.append({
                     'Название комнаты': room_data.get("name", ""),
                     'Код комнаты': room_data.get("code", ""),
@@ -407,16 +406,12 @@ class RoomViewSet(ModelViewSet):
                     'Пользователь': volume_data.get("created_by", ""),
                     'Дата': formatted_date,
                 })
-            else:  # Если данных о работах нет, добавляем строки для всех планируемых типов
+            else:  # Если данных о работах нет
                 planned_types = room_data.get(planning_field, [])
-                if not planned_types or len(planned_types) == 0:
-                    return  # Пропускаем, если нет планируемых типов
-
-                # Обходим все планируемые типы
+                if not planned_types:
+                    return
                 for planned_type in planned_types:
                     type_obj = planned_type.get(type_field, {})
-                    planned_area = planned_type.get("area_finish", 0)
-
                     csv_data.append({
                         'Название комнаты': room_data.get("name", ""),
                         'Код комнаты': room_data.get("code", ""),
@@ -429,7 +424,7 @@ class RoomViewSet(ModelViewSet):
                         'Объем работ (м²)': 0,
                         'Завершение (%)': 0,
                         'Оставшийся объем (м²)': 0,
-                        'Планируемая площадь (м²)': planned_area,
+                        'Планируемая площадь (м²)': planned_type.get("area_finish", 0),
                         'Проект': project.get("name", ""),
                         'Организация': organization.get("name", ""),
                         'Пользователь': "",
@@ -441,21 +436,24 @@ class RoomViewSet(ModelViewSet):
             wall_volumes = room_data.get("wall_volumes", [])
             ceiling_volumes = room_data.get("ceiling_volumes", [])
 
-            # Обрабатываем полы
+            # Обрабатываем все записи для полов
             if floor_volumes:
-                write_work_row(room_data, "Пол", floor_volumes[0], "floor_type", "planning_type_floor")
+                for volume in floor_volumes:
+                    write_work_row(room_data, "Пол", volume, "floor_type", "planning_type_floor")
             else:
                 write_work_row(room_data, "Пол", None, "floor_type", "planning_type_floor")
 
-            # Обрабатываем стены
+            # Обрабатываем все записи для стен
             if wall_volumes:
-                write_work_row(room_data, "Стена", wall_volumes[0], "wall_type", "planning_type_wall")
+                for volume in wall_volumes:
+                    write_work_row(room_data, "Стена", volume, "wall_type", "planning_type_wall")
             else:
                 write_work_row(room_data, "Стена", None, "wall_type", "planning_type_wall")
 
-            # Обрабатываем потолки
+            # Обрабатываем все записи для потолков
             if ceiling_volumes:
-                write_work_row(room_data, "Потолок", ceiling_volumes[0], "ceiling_type", "planning_type_ceiling")
+                for volume in ceiling_volumes:
+                    write_work_row(room_data, "Потолок", volume, "ceiling_type", "planning_type_ceiling")
             else:
                 write_work_row(room_data, "Потолок", None, "ceiling_type", "planning_type_ceiling")
 
